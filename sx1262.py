@@ -155,6 +155,71 @@ class FskConfig(object):
         return toa
 
 
+def getTxPower(configPwr):
+    '''Returns the power consumption (in Watts) when SX1262 is transmitting with 1/2 wave antenna for a given configured power level.
+    Args:
+      configPwr: configured power level (in dBm)
+    '''
+    configPwrList = [-9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]
+    consumedPwrList = [0.102232706962291,
+                       0.10605795151005062,
+                       0.1018726071808578,
+                       0.1055663120264606,
+                       0.11338459295994305,
+                       0.1172563780423522,
+                       0.12101477289503175,
+                       0.12875360034864494,
+                       0.13584356812867068,
+                       0.14310316445602753,
+                       0.15022126146246428,
+                       0.16027161570417706,
+                       0.16651042912060093,
+                       0.17722397750465702,
+                       0.1847670147042248,
+                       0.19379373782516432,
+                       0.2041878004014488,
+                       0.21372336098921055,
+                       0.22514546634269766,
+                       0.2362092510653682,
+                       0.2480739948332415,
+                       0.26178691590284997,
+                       0.2780706814443991,
+                       0.2926323230525427,
+                       0.30346624358694085,
+                       0.3121536679295964,
+                       0.3215969884606631,
+                       0.33407471290069624,
+                       0.3486906716841178,
+                       0.36689187784523625,
+                       0.3905990519543255
+                    ]
+    assert configPwr >= min(configPwrList) and configPwr <= max(configPwrList)
+    idx = configPwrList.index(configPwr)
+    return consumedPwrList[idx]
+
+def getRxPower():
+    '''Returns the power (in Watts) consumption in the receive mode (DC-DC)
+    '''
+    return 0.005*3.3 # in Watt
+
+
+def getSensitivity(mod):
+    '''Returns the receive sensitivity levels.
+    Linear interpolation/extrapolation based on datasheet values for 125kHz: -124 dBm for SF7, -137 dBm for SF12
+    TODO: improved values based on measurements.
+    '''
+    if 'fsk' in mod:
+      return -109
+    elif 'lora' in mod:
+      sf = int(mod.replace('lora', ''))
+      return sf*(-2.6) - 105.8
+    else:
+      return None
+
+
+
+
+
 class TestTimeOnAirMethods(unittest.TestCase):
 
     def test_constructor1(self):
