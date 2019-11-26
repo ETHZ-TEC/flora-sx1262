@@ -203,18 +203,20 @@ def getRxPower():
     return 0.005*3.3 # in Watt
 
 
-def getSensitivity(mod):
+def getSensitivity(mod, datarate):
     '''Returns the receive sensitivity levels.
-    Linear interpolation/extrapolation based on datasheet values for 125kHz: -124 dBm for SF7, -137 dBm for SF12
+    LoRa: Linear interpolation/extrapolation based on datasheet values for 125kHz: -124 dBm for SF7, -137 dBm for SF12
+    FSK: Log interpolation/extrapolation based on datasheets values
     TODO: improved values based on measurements.
     '''
-    if 'fsk' in mod:
-      return -109
-    elif 'lora' in mod:
-      sf = int(mod.replace('lora', ''))
-      return sf*(-2.6) - 105.8
+    if mod == 'fsk':
+        bitrate = datarate
+        return 3.614*np.log(datarate) - 148.285
+    elif mod == 'lora':
+        sf = datarate
+        return sf*(-2.6) - 105.8
     else:
-      return None
+        return None
 
 
 
@@ -275,13 +277,24 @@ class TestTimeOnAirMethods(unittest.TestCase):
 
 if __name__ == '__main__':
     fskconfig = FskConfig()
-    fskconfig.bitrate = 100000
+    fskconfig.bitrate = 1000
     fskconfig.nPreambleBits = 16
     fskconfig.nSyncwordBytes = 2
     fskconfig.nLengthBytes = 1
     fskconfig.nAddressBytes = 1
-    fskconfig.phyPl = 255
+    fskconfig.phyPl = 20
     fskconfig.nCrcBytes = 1
     print(fskconfig.timeOnAir)
+
+#    loraconfig = LoraConfig()
+#    loraconfig.bw = 125000
+#    loraconfig.sf = 5
+#    loraconfig.phyPl = 11
+#    loraconfig.cr = 1
+#    loraconfig.ih = False
+#    loraconfig.lowDataRate = False
+#    loraconfig.crc = True
+#    loraconfig.nPreambleSyms = 12
+#    print('Time-on-air: {:.6f} s'.format(loraconfig.timeOnAir));
 
     unittest.main()
