@@ -7,6 +7,7 @@ Created on Mon Nov 25 16:14:46 2019
 """
 
 import random
+import sys
 import numpy as np
 import pandas as pd
 
@@ -16,17 +17,9 @@ from bokeh.palettes import plasma
 from bokeh.plotting import figure
 from bokeh.transform import transform
 
+sys.path.append("..") # Adds higher directory to python modules path.
 from sx1262 import *
 
-
-################################################################################
-# Config
-################################################################################
-modulationList = ['fsk_1', 'fsk_5', 'fsk_10', 'fsk_100', 'fsk_300', 'lora_sf5', 'lora_sf6', 'lora_sf7', 'lora_sf8', 'lora_sf9', 'lora_sf10', 'lora_sf11', 'lora_sf12'] # valid options 'lora_sfX' or 'fsk_Y' (X=spreading factor number, Y=bitrate in kbit)
-configPwrList = [-9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]
-payloadSize = 20 # in Bytes
-pointSelection = 'border' # 'border' (max distance) or 'reachable' (reachable configuration)
-pathlossModel = 'friis' # 'friis' (Friis free-space pathloss model) or 'hata' (Hata sub-urban path loss model)
 
 ################################################################################
 # Pathloss model
@@ -100,7 +93,7 @@ def getEnergyPerBit(mod):
 
     return energy
 
-def generateBorderPoints(pathlossModel):
+def generateBorderPoints(pathlossModel, modulationList, configPwrList, payloadSize):
     loraconfig = LoraConfig()
     loraconfig.bw = 125000
     loraconfig.sf = 5
@@ -163,7 +156,7 @@ def generateBorderPoints(pathlossModel):
 
     return pd.DataFrame.from_dict(retList)
 
-def generateReachablePoints(pathlossModel, numPoints=1000):
+def generateReachablePoints(pathlossModel, modulationList, configPwrList, payloadSize, numPoints=1000):
     loraconfig = LoraConfig()
     loraconfig.bw = 125000
     loraconfig.sf = 5
@@ -232,18 +225,23 @@ def generateReachablePoints(pathlossModel, numPoints=1000):
 
     return pd.DataFrame.from_dict(retList)
 
-################################################################################
-# Main
-################################################################################
-
-if __name__ == "__main__":
+def plotPoints(pointSelection, pathlossModel, modulationList, configPwrList, payloadSize, numPoints=10000, write_output_file=False):
     if pointSelection == 'border':
-        df = generateBorderPoints(pathlossModel=pathlossModel)
+        df = generateBorderPoints(
+            pathlossModel=pathlossModel,
+            modulationList=modulationList,
+            configPwrList=configPwrList,
+            payloadSize=payloadSize,
+        )
     elif pointSelection == 'reachable':
-        df = generateReachablePoints(pathlossModel=pathlossModel, numPoints=10000)
+        df = generateReachablePoints(pathlossModel=pathlossModel,
+            modulationList=modulationList,
+            configPwrList=configPwrList,
+            payloadSize=payloadSize,
+            numPoints=numPoints,
+        )
     else:
         raise Exception('You need to choose a valid point selection (pointSelection)!')
-
 
     source = ColumnDataSource(data=dict(
         distance=df.distance,
@@ -267,7 +265,7 @@ if __name__ == "__main__":
     p = figure(
         sizing_mode='stretch_both',
         tools=[hover, 'pan', 'wheel_zoom', 'reset', 'save', 'box_zoom'],
-        title="Energy Per Bit (SX1262) - Config: pointSelection={}, pathlossModel={}".format(pointSelection, pathlossModel))
+        title="Energy Per Bit (SX1262) - Config: pointSelection={}, pathlossModel={}, payloadSize={}".format(pointSelection, pathlossModel, payloadSize))
     p.circle(
         'energyPerBit',
         'distance',
@@ -284,3 +282,26 @@ if __name__ == "__main__":
 
     output_file('energyPerBit_{}_{}.html'.format(pointSelection, pathlossModel))
     show(p)
+
+################################################################################
+# Main
+################################################################################
+
+if __name__ == "__main__":
+    # Config
+    modulationList = ['fsk_1', 'fsk_5', 'fsk_10', 'fsk_100', 'fsk_300', 'lora_sf5', 'lora_sf6', 'lora_sf7', 'lora_sf8', 'lora_sf9', 'lora_sf10', 'lora_sf11', 'lora_sf12'] # valid options 'lora_sfX' or 'fsk_Y' (X=spreading factor number, Y=bitrate in kbit)
+    configPwrList = [-9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]
+    payloadSize = 20 # in Bytes
+    pointSelection = 'reachable' # 'border' (max distance) or 'reachable' (reachable configuration)
+    pathlossModel = 'friis' # 'friis' (Friis free-space pathloss model) or 'hata' (Hata sub-urban path loss model)
+    numPoints = 10000
+
+    plotPoints(
+        pointSelection=pointSelection,
+        pathlossModel=pathlossModel,
+        modulationList=modulationList,
+        configPwrList=configPwrList,
+        payloadSize=payloadSize,
+        numPoints=numPoints,
+        write_output_file=True,
+    )
