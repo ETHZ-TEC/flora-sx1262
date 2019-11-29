@@ -65,7 +65,7 @@ class LoraConfig(object):
         """
         assert self.bw in self._bwList
         assert self.sf in self._sfList
-        assert type(self.ih) == bool
+        assert type(self.ih) == bool or type(self.ih) == int
         assert type(self.lowDataRate) == bool
         assert self.cr in self._crList
         assert self._nPreambleSymsRange[0] <= self.nPreambleSyms <= self._nPreambleSymsRange[1]
