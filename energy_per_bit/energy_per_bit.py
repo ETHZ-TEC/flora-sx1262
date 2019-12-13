@@ -290,7 +290,7 @@ def plotPoints(pointSelection, pathlossModel, modulationList, configPwrList, pay
 if __name__ == "__main__":
     # Config
     modulationList = ['fsk_1', 'fsk_5', 'fsk_10', 'fsk_100', 'fsk_300', 'lora_sf5', 'lora_sf6', 'lora_sf7', 'lora_sf8', 'lora_sf9', 'lora_sf10', 'lora_sf11', 'lora_sf12'] # valid options 'lora_sfX' or 'fsk_Y' (X=spreading factor number, Y=bitrate in kbit)
-    configPwrList = [-9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]
+    configPwrList = [-9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]
     payloadSize = 20 # in Bytes
     pointSelection = 'reachable' # 'border' (max distance) or 'reachable' (reachable configuration)
     pathlossModel = 'friis' # 'friis' (Friis free-space pathloss model) or 'hata' (Hata sub-urban path loss model)
