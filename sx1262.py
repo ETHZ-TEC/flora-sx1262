@@ -83,6 +83,14 @@ class LoraConfig(object):
 
         return toa
 
+    @property
+    def sensitivity(self):
+        """Get the radio receive sensitivity for the current radio configuration.
+        Returns:
+            Radio sensitivity in dBm
+        """
+        return getSensitivity(mod='lora', datarate=self.sf)
+
 
 class FskConfig(object):
     def __init__(self, bitrate=None, nPreambleBits=None, nSyncwordBytes=None, nLengthBytes=None, nAddressBytes=None, phyPl=None, nCrcBytes=None):
@@ -154,162 +162,176 @@ class FskConfig(object):
 
         return toa
 
+    @property
+    def sensitivity(self):
+        """Get the radio receive sensitivity for the current radio configuration.
+        Returns:
+            Radio sensitivity in dBm
+        """
+        return getSensitivity(mod='fsk', datarate=self.bitrate)
+
+################################################################################
+
+# power mapping based on measurements on the ETZ roof with DevBoard (3V supply), and half-wave antenna, and Rocketlogger, 27.3.2019
+# NOTE: value for +22dBm has not been measured
+# NOTE: MCU was runnig during measurement (according to code used)
+originalPowerMapping = {
+    -9: 0.102232706962291,
+    -8: 0.10605795151005062,
+    -7: 0.1018726071808578,
+    -6: 0.1055663120264606,
+    -5: 0.11338459295994305,
+    -4: 0.1172563780423522,
+    -3: 0.12101477289503175,
+    -2: 0.12875360034864494,
+    -1: 0.13584356812867068,
+     0: 0.14310316445602753,
+     1: 0.15022126146246428,
+     2: 0.16027161570417706,
+     3: 0.16651042912060093,
+     4: 0.17722397750465702,
+     5: 0.1847670147042248,
+     6: 0.19379373782516432,
+     7: 0.2041878004014488,
+     8: 0.21372336098921055,
+     9: 0.22514546634269766,
+    10: 0.2362092510653682,
+    11: 0.2480739948332415,
+    12: 0.26178691590284997,
+    13: 0.2780706814443991,
+    14: 0.2926323230525427,
+    15: 0.30346624358694085,
+    16: 0.3121536679295964,
+    17: 0.3215969884606631,
+    18: 0.33407471290069624,
+    19: 0.3486906716841178,
+    20: 0.36689187784523625,
+    21: 0.3905990519543255,
+}
+
+# power mapping based on measurements with FlockLab observer 029 (3.3V supply), and 1/4 wave antenna, 13.12.2019, FlockLab test 79473
+# NOTE: MCU was in STOP2 when radio Tx consumption was measured
+quarterWaveFlPowerMapping = {
+    -9: 0.08945616702,
+    -8: 0.09460299208799999,
+    -7: 0.099578706546,
+    -6: 0.10448746192499998,
+    -5: 0.11455434091199998,
+    -4: 0.11929931531099999,
+    -3: 0.12430729307699999,
+    -2: 0.133929239664,
+    -1: 0.143157369432,
+     0: 0.152242811028,
+     1: 0.160868436861,
+     2: 0.17299270797599997,
+     3: 0.1806770334765,
+     4: 0.195096958452,
+     5: 0.204870363225,
+     6: 0.2176852541325,
+     7: 0.23280722549700003,
+     8: 0.24700358004299997,
+     9: 0.26316197721,
+    10: 0.27861563937899997,
+    11: 0.29544817262399997,
+    12: 0.313915058556,
+    13: 0.334245148809,
+    14: 0.35092590380099997,
+    15: 0.36629330654400005,
+    16: 0.3820694414625,
+    17: 0.39747749334149995,
+    18: 0.41424662028750003,
+    19: 0.43013109966749996,
+    20: 0.4459038418229999,
+    21: 0.48508167193199997,
+    22: 0.4852003546995,
+}
+
+# power mapping based on measurements with FlockLab observer 029 (3.3V supply), and 1/2 wave antenna, 13.12.2019, FlockLab test 79478
+# NOTE: MCU was in STOP2 when radio Tx consumption was measured
+halfWaveFlPowerMapping = {
+    -9: 0.087393237657,
+    -8: 0.09261940861799998,
+    -7: 0.097593682758,
+    -6: 0.102728153022,
+    -5: 0.11276440111199998,
+    -4: 0.11774408447999998,
+    -3: 0.122769026061,
+    -2: 0.132438343356,
+    -1: 0.14175660544649998,
+     0: 0.15081100001550002,
+     1: 0.15947407429799998,
+     2: 0.17163240109949998,
+     3: 0.17933417053200001,
+     4: 0.19385680668750002,
+     5: 0.20365722557399998,
+     6: 0.21657585186600004,
+     7: 0.23185936365899998,
+     8: 0.246392882274,
+     9: 0.262704754059,
+    10: 0.27850527850199996,
+    11: 0.294775220817,
+    12: 0.3135657317595,
+    13: 0.3339379755195,
+    14: 0.350712863754,
+    15: 0.366039201198,
+    16: 0.38210797815299996,
+    17: 0.397222875918,
+    18: 0.414392317152,
+    19: 0.430949972376,
+    20: 0.44819405446199995,
+    21: 0.48682536127500003,
+    22: 0.48691466141999995,
+}
+
+# power mapping based on measurements with Rocketlogger and DevBoard (3.0V supply), and 1/2 wave antenna, 13.12.2019, binary is based on the powerprofiling test (comboard_testing) used on FlockLab
+# NOTE: MCU was in STOP2 when radio Tx consumption was measured
+halfWaveRlPowerMapping = {
+    -9: 0.0795,
+    -8: 0.0843,
+    -7: 0.0888,
+    -6: 0.0933,
+    -5: 0.1026,
+    -4: 0.1068,
+    -3: 0.1113,
+    -2: 0.12,
+    -1: 0.1284,
+     0: 0.1368,
+     1: 0.1446,
+     2: 0.1554,
+     3: 0.1623,
+     4: 0.1755,
+     5: 0.1845,
+     6: 0.1962,
+     7: 0.21,
+     8: 0.2229,
+     9: 0.2376,
+    10: 0.2517,
+    11: 0.2661,
+    12: 0.2814,
+    13: 0.297,
+    14: 0.3102,
+    15: 0.3228,
+    16: 0.3363,
+    17: 0.3492,
+    18: 0.3642,
+    19: 0.3783,
+    20: 0.3936,
+    21: 0.4239,
+    22: 0.4257,
+}
+
+powerMapping = halfWaveRlPowerMapping
+
+
+def getConfigTxPowerLevels():
+    return powerMapping.keys()
+
 
 def getTxPower(configPwr):
     '''Returns the power consumption (in Watts) when SX1262 is transmitting with 1/2 wave antenna for a given configured power level.
     Args:
       configPwr: configured power level (in dBm)
     '''
-
-    # power mapping based on measurements on the ETZ roof with DevBoard (3V supply), and half-wave antenna, and Rocketlogger, 27.3.2019
-    # NOTE: value for +22dBm has not been measured
-    # NOTE: MCU was runnig during measurement (according to code used)
-    originalPowerMapping = {
-        -9: 0.102232706962291,
-        -8: 0.10605795151005062,
-        -7: 0.1018726071808578,
-        -6: 0.1055663120264606,
-        -5: 0.11338459295994305,
-        -4: 0.1172563780423522,
-        -3: 0.12101477289503175,
-        -2: 0.12875360034864494,
-        -1: 0.13584356812867068,
-         0: 0.14310316445602753,
-         1: 0.15022126146246428,
-         2: 0.16027161570417706,
-         3: 0.16651042912060093,
-         4: 0.17722397750465702,
-         5: 0.1847670147042248,
-         6: 0.19379373782516432,
-         7: 0.2041878004014488,
-         8: 0.21372336098921055,
-         9: 0.22514546634269766,
-        10: 0.2362092510653682,
-        11: 0.2480739948332415,
-        12: 0.26178691590284997,
-        13: 0.2780706814443991,
-        14: 0.2926323230525427,
-        15: 0.30346624358694085,
-        16: 0.3121536679295964,
-        17: 0.3215969884606631,
-        18: 0.33407471290069624,
-        19: 0.3486906716841178,
-        20: 0.36689187784523625,
-        21: 0.3905990519543255,
-    }
-
-    # power mapping based on measurements with FlockLab observer 029 (3.3V supply), and 1/4 wave antenna, 13.12.2019, FlockLab test 79473
-    # NOTE: MCU was in STOP2 when radio Tx consumption was measured
-    quarterWaveFlPowerMapping = {
-        -9: 0.08945616702,
-        -8: 0.09460299208799999,
-        -7: 0.099578706546,
-        -6: 0.10448746192499998,
-        -5: 0.11455434091199998,
-        -4: 0.11929931531099999,
-        -3: 0.12430729307699999,
-        -2: 0.133929239664,
-        -1: 0.143157369432,
-         0: 0.152242811028,
-         1: 0.160868436861,
-         2: 0.17299270797599997,
-         3: 0.1806770334765,
-         4: 0.195096958452,
-         5: 0.204870363225,
-         6: 0.2176852541325,
-         7: 0.23280722549700003,
-         8: 0.24700358004299997,
-         9: 0.26316197721,
-        10: 0.27861563937899997,
-        11: 0.29544817262399997,
-        12: 0.313915058556,
-        13: 0.334245148809,
-        14: 0.35092590380099997,
-        15: 0.36629330654400005,
-        16: 0.3820694414625,
-        17: 0.39747749334149995,
-        18: 0.41424662028750003,
-        19: 0.43013109966749996,
-        20: 0.4459038418229999,
-        21: 0.48508167193199997,
-        22: 0.4852003546995,
-    }
-
-    # power mapping based on measurements with FlockLab observer 029 (3.3V supply), and 1/2 wave antenna, 13.12.2019, FlockLab test 79478
-    # NOTE: MCU was in STOP2 when radio Tx consumption was measured
-    halfWaveFlPowerMapping = {
-        -9: 0.087393237657,
-        -8: 0.09261940861799998,
-        -7: 0.097593682758,
-        -6: 0.102728153022,
-        -5: 0.11276440111199998,
-        -4: 0.11774408447999998,
-        -3: 0.122769026061,
-        -2: 0.132438343356,
-        -1: 0.14175660544649998,
-         0: 0.15081100001550002,
-         1: 0.15947407429799998,
-         2: 0.17163240109949998,
-         3: 0.17933417053200001,
-         4: 0.19385680668750002,
-         5: 0.20365722557399998,
-         6: 0.21657585186600004,
-         7: 0.23185936365899998,
-         8: 0.246392882274,
-         9: 0.262704754059,
-        10: 0.27850527850199996,
-        11: 0.294775220817,
-        12: 0.3135657317595,
-        13: 0.3339379755195,
-        14: 0.350712863754,
-        15: 0.366039201198,
-        16: 0.38210797815299996,
-        17: 0.397222875918,
-        18: 0.414392317152,
-        19: 0.430949972376,
-        20: 0.44819405446199995,
-        21: 0.48682536127500003,
-        22: 0.48691466141999995,
-    }
-
-    # power mapping based on measurements with Rocketlogger and DevBoard (3.0V supply), and 1/2 wave antenna, 13.12.2019, binary is based on the powerprofiling test (comboard_testing) used on FlockLab
-    # NOTE: MCU was in STOP2 when radio Tx consumption was measured
-    halfWaveRlPowerMapping = {
-        -9: 0.0795,
-        -8: 0.0843,
-        -7: 0.0888,
-        -6: 0.0933,
-        -5: 0.1026,
-        -4: 0.1068,
-        -3: 0.1113,
-        -2: 0.12,
-        -1: 0.1284,
-         0: 0.1368,
-         1: 0.1446,
-         2: 0.1554,
-         3: 0.1623,
-         4: 0.1755,
-         5: 0.1845,
-         6: 0.1962,
-         7: 0.21,
-         8: 0.2229,
-         9: 0.2376,
-        10: 0.2517,
-        11: 0.2661,
-        12: 0.2814,
-        13: 0.297,
-        14: 0.3102,
-        15: 0.3228,
-        16: 0.3363,
-        17: 0.3492,
-        18: 0.3642,
-        19: 0.3783,
-        20: 0.3936,
-        21: 0.4239,
-        22: 0.4257,
-    }
-
-    powerMapping = halfWaveRlPowerMapping
 
     assert configPwr >= min(powerMapping.keys()) and configPwr <= max(powerMapping.keys())
     return powerMapping[configPwr]
@@ -328,7 +350,7 @@ def getSensitivity(mod, datarate):
     '''
     if mod == 'fsk':
         bitrate = datarate
-        return 3.614*np.log(datarate) - 148.285
+        return 3.614*np.log(bitrate) - 148.285
     elif mod == 'lora':
         sf = datarate
         return sf*(-2.6) - 105.8
