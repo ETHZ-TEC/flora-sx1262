@@ -54,7 +54,7 @@ class LoraConfig(object):
                         500000]
         self._sfList = (5, 6, 7, 8, 9, 10, 11, 12)
         self._crList = (1, 2, 3, 4)
-        self._phyPlRange = (1, 255)
+        self._phyPlRange = (0, 255)
         self._nPreambleSymsRange = (0, 65535) # datasheet says (8, 65535) but less is possible in reality
 
     @property
@@ -117,7 +117,7 @@ class FskConfig(object):
         self._nSyncwordBytesList = (0, 1, 2, 3, 4, 5, 6, 7, 8)
         self._nLengthBytesList = (0, 1)
         self._nAddressBytesList = (0, 1)
-        self._phyPlRange = (1, 255)
+        self._phyPlRange = (0, 255)
         self._nCrcBytesList = (0, 1, 2)
         self._bwList = [    4800,
                             5800,
@@ -416,24 +416,28 @@ class TestTimeOnAirMethods(unittest.TestCase):
 
 if __name__ == '__main__':
     fskconfig = FskConfig()
-    fskconfig.bitrate = 1000
+    fskconfig.bitrate = 250000
     fskconfig.nPreambleBits = 16
-    fskconfig.nSyncwordBytes = 2
+    fskconfig.nSyncwordBytes = 4
     fskconfig.nLengthBytes = 1
     fskconfig.nAddressBytes = 1
-    fskconfig.phyPl = 20
+    fskconfig.phyPl = 0
     fskconfig.nCrcBytes = 1
-    print(fskconfig.timeOnAir)
+    for i in range(0, 256):
+        fskconfig.phyPl = i
+        toa = fskconfig.timeOnAir
+        print('{:d}, // {}: {:.3f} ms'.format(int(toa*8e6), i, toa*1e3))
+    print('Time-on-air: {:.6f} s'.format(fskconfig.timeOnAir))
 
 #    loraconfig = LoraConfig()
 #    loraconfig.bw = 125000
-#    loraconfig.sf = 5
-#    loraconfig.phyPl = 11
+#    loraconfig.sf = 12
+#    loraconfig.phyPl = 1
 #    loraconfig.cr = 1
 #    loraconfig.ih = False
 #    loraconfig.lowDataRate = False
 #    loraconfig.crc = True
-#    loraconfig.nPreambleSyms = 12
+#    loraconfig.nPreambleSyms = 10
 #    print('Time-on-air: {:.6f} s'.format(loraconfig.timeOnAir));
 
-    unittest.main()
+#    unittest.main()
