@@ -54,7 +54,7 @@ class LoraConfig(object):
                         500000]
         self._sfList = (5, 6, 7, 8, 9, 10, 11, 12)
         self._crList = (1, 2, 3, 4)
-        self._phyPlRange = (1, 255)
+        self._phyPlRange = (0, 255)
         self._nPreambleSymsRange = (0, 65535) # datasheet says (8, 65535) but less is possible in reality
 
     @property
@@ -118,7 +118,7 @@ class FskConfig(object):
         self._nSyncwordBytesList = (0, 1, 2, 3, 4, 5, 6, 7, 8)
         self._nLengthBytesList = (0, 1)
         self._nAddressBytesList = (0, 1)
-        self._phyPlRange = (1, 255)
+        self._phyPlRange = (0, 255)
         self._nCrcBytesList = (0, 1, 2)
         self._bwList = [    4800,
                             5800,
