@@ -71,12 +71,13 @@ class LoraConfig(object):
         assert self._nPreambleSymsRange[0] <= self.nPreambleSyms <= self._nPreambleSymsRange[1]
         assert self._phyPlRange[0] <= self.phyPl <= self._phyPlRange[1]
 
-        sub = 2 if (self.sf in (5, 6) and self.lowDataRate) else 0
-        syncSyms = 6.25 if (self.sf in (5,6)) else 4.25
+        sub = 2 if ( (self.sf not in (5, 6)) and self.lowDataRate) else 0
+        syncSyms = 6.25 if (self.sf in (5, 6)) else 4.25
         nBitCrc = 16 if self.crc else 0
         nSymbolHeader = 0 if self.ih else 20
+        constVal = 0 if (self.sf in (5, 6)) else 8
 
-        arg1 = 8*self.phyPl + nBitCrc - 4*self.sf + nSymbolHeader
+        arg1 = 8*self.phyPl + nBitCrc - 4*self.sf + nSymbolHeader + constVal
         ceilPart = np.ceil(max(arg1, 0)/(4*(self.sf - sub)))
         nSymbol = self.nPreambleSyms + syncSyms + 8 + ceilPart*(self.cr + 4)
         toa = (2**(self.sf) / self.bw) * nSymbol
@@ -415,25 +416,25 @@ class TestTimeOnAirMethods(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    fskconfig = FskConfig()
-    fskconfig.bitrate = 1000
-    fskconfig.nPreambleBits = 16
-    fskconfig.nSyncwordBytes = 2
-    fskconfig.nLengthBytes = 1
-    fskconfig.nAddressBytes = 1
-    fskconfig.phyPl = 20
-    fskconfig.nCrcBytes = 1
-    print(fskconfig.timeOnAir)
+#    fskconfig = FskConfig()
+#    fskconfig.bitrate = 250000
+#    fskconfig.nPreambleBits = 16
+#    fskconfig.nSyncwordBytes = 2
+#    fskconfig.nLengthBytes = 1
+#    fskconfig.nAddressBytes = 1
+#    fskconfig.phyPl = 6
+#    fskconfig.nCrcBytes = 1
+#    print(fskconfig.timeOnAir)
 
-#    loraconfig = LoraConfig()
-#    loraconfig.bw = 125000
-#    loraconfig.sf = 5
-#    loraconfig.phyPl = 11
-#    loraconfig.cr = 1
-#    loraconfig.ih = False
-#    loraconfig.lowDataRate = False
-#    loraconfig.crc = True
-#    loraconfig.nPreambleSyms = 12
-#    print('Time-on-air: {:.6f} s'.format(loraconfig.timeOnAir));
+    loraconfig = LoraConfig()
+    loraconfig.bw = 125000
+    loraconfig.sf = 12
+    loraconfig.phyPl = 11
+    loraconfig.cr = 1
+    loraconfig.ih = False
+    loraconfig.lowDataRate = True
+    loraconfig.crc = True
+    loraconfig.nPreambleSyms = 10
+    print('Time-on-air: {:.6f} s'.format(loraconfig.timeOnAir));
 
-    unittest.main()
+#    unittest.main()
