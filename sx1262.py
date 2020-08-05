@@ -14,6 +14,7 @@ Calculations are based on the data sheet for SX126x LoRa tranceiver chips.
 """
 
 import numpy as np
+import json
 import unittest
 
 minPlOverhead = 13 # bytes
@@ -59,9 +60,9 @@ class LoraConfig(object):
 
     @property
     def timeOnAir(self):
-        """Calculates the on-air-time of a LoRa modulated transmission.
+        """Calculates the on-air-time of a transmission using LoRa modulation.
         Returns:
-            Time-on-air of a single LoRa Packet in seconds.
+            Time-on-air of a single packet in seconds.
         """
         assert self.bw in self._bwList
         assert self.sf in self._sfList
@@ -99,7 +100,7 @@ class FskConfig(object):
         Args:
             bitrate: bit rate in bits/sec
             nPreambleBits: number of preamble bits (8 to 65535)
-            nSyncwordBytes: number of sync words bytes (0 to 8)
+            nSyncwordBytes: number of sync word bytes (0 to 8)
             nLengthBytes: number of length bytes (0 or 1)
             nAddressBytes: number of address bytes (0 or 1)
             phyPl: physical layer payload length in bytes (1 to 255)
@@ -143,9 +144,9 @@ class FskConfig(object):
                           467000,]
     @property
     def timeOnAir(self):
-        """Calculates the on-air-time of a FSK modulated transmission.
+        """Calculates the on-air-time of a transmission using FSK modulation.
         Returns:
-            Time-on-air of a single LoRa Packet in seconds.
+            Time-on-air of a single packet in seconds.
         """
         assert self._bitrateRange[0] <= self.bitrate <= self._bitrateRange[1]
         assert self._nPreambleBitsRange[0] <= self.nPreambleBits <= self._nPreambleBitsRange[1]
@@ -359,7 +360,128 @@ def getSensitivity(mod, datarate):
         return None
 
 
+flora_radio_constants_json = """
+[
+        {
+            "modem": "MODEM_LORA",
+            "bandwidth": 0,
+            "datarate": 12,
+            "coderate": 5,
+            "preambleLen": 10
+        },
+        {
+            "modem": "MODEM_LORA",
+            "bandwidth": 0,
+            "datarate": 11,
+            "coderate": 5,
+            "preambleLen": 10
+        },
+        {
+            "modem": "MODEM_LORA",
+            "bandwidth": 0,
+            "datarate": 10,
+            "coderate": 5,
+            "preambleLen": 10
+        },
+        {
+            "modem": "MODEM_LORA",
+            "bandwidth": 0,
+            "datarate": 9,
+            "coderate": 5,
+            "preambleLen": 10
+        },
+        {
+            "modem": "MODEM_LORA",
+            "bandwidth": 0,
+            "datarate": 8,
+            "coderate": 5,
+            "preambleLen": 10
+        },
+        {
+            "modem": "MODEM_LORA",
+            "bandwidth": 0,
+            "datarate": 7,
+            "coderate": 5,
+            "preambleLen": 10
+        },
+        {
+            "modem": "MODEM_LORA",
+            "bandwidth": 0,
+            "datarate": 6,
+            "coderate": 5,
+            "preambleLen": 12
+        },
+        {
+            "modem": "MODEM_LORA",
+            "bandwidth": 0,
+            "datarate": 5,
+            "coderate": 5,
+            "preambleLen": 12
+        },
+        {
+            "modem": "MODEM_FSK",
+            "bandwidth": 234300,
+            "datarate": 125000,
+            "fdev": 50000,
+            "preambleLen": 2
+        },
+        {
+            "modem": "MODEM_FSK",
+            "bandwidth": 234300,
+            "datarate": 200000,
+            "fdev": 10000,
+            "preambleLen": 2
+        },
+        {
+            "modem": "MODEM_FSK",
+            "bandwidth": 312000,
+            "datarate": 250000,
+            "fdev": 23500,
+            "preambleLen": 4
+        }
+]
+"""
 
+def flora_toa(modIdx, phyPlLen):
+    """Calculates the time-on-air of a transmission.
+    Args:
+        modIdx: index of modulation radio_modulations struct array as defined in radio_constants.c
+        phyPlLen: physical layer payload (in bytes)
+    Returns:
+        Time-on-air of a single packet in seconds.
+    """
+    mods = json.loads(flora_radio_constants_json)
+    mod = mods[modIdx]
+
+    def mapBw(bw):
+        if bw == 0: return 125000
+        elif bw == 1: return 250000
+        elif bw == 2: return 500000
+        else: raise Exception('ERROR: undefined bandwidth!')
+
+    if mod['modem'] == "MODEM_LORA":
+        loraconfig = LoraConfig()
+        loraconfig.bw = mapBw(mod['bandwidth'])
+        loraconfig.sf = mod['datarate']
+        loraconfig.phyPl = phyPlLen
+        loraconfig.cr = mod['coderate'] - 4
+        loraconfig.ih = False
+        loraconfig.lowDataRate = True if mod['datarate'] in [11, 12] else False
+        loraconfig.crc = True
+        loraconfig.nPreambleSyms = mod['preambleLen']
+        return loraconfig.timeOnAir
+    elif mod['modem'] == "MODEM_FSK":
+        fskconfig = FskConfig()
+        fskconfig.bitrate = mod['datarate']
+        fskconfig.nPreambleBits = 8*mod['preambleLen']
+        fskconfig.nSyncwordBytes = 4
+        fskconfig.nLengthBytes = 1
+        fskconfig.nAddressBytes = 0
+        fskconfig.phyPl = phyPlLen
+        fskconfig.nCrcBytes = 2
+        return fskconfig.timeOnAir
+    else:
+        raise Exception('ERROR: invalid modulation!')
 
 
 class TestTimeOnAirMethods(unittest.TestCase):
@@ -426,15 +548,20 @@ if __name__ == '__main__':
 #    fskconfig.nCrcBytes = 1
 #    print(fskconfig.timeOnAir)
 
-    loraconfig = LoraConfig()
-    loraconfig.bw = 125000
-    loraconfig.sf = 12
-    loraconfig.phyPl = 11
-    loraconfig.cr = 1
-    loraconfig.ih = False
-    loraconfig.lowDataRate = True
-    loraconfig.crc = True
-    loraconfig.nPreambleSyms = 10
-    print('Time-on-air: {:.6f} s'.format(loraconfig.timeOnAir));
+    # loraconfig = LoraConfig()
+    # loraconfig.bw = 125000
+    # loraconfig.sf = 12
+    # loraconfig.phyPl = 11
+    # loraconfig.cr = 1
+    # loraconfig.ih = False
+    # loraconfig.lowDataRate = True
+    # loraconfig.crc = True
+    # loraconfig.nPreambleSyms = 10
+    # print('Time-on-air (custom): {:.6f}s'.format(loraconfig.timeOnAir))
+
+
+    modIdx = 10   # modulation (as defined in radio_constants.c)
+    phyPlLen = 0  # in bytes
+    print('Time-on-air (mod={}, phyPlLen={}): {:.6f}s'.format(modIdx, phyPlLen, flora_toa(modIdx, phyPlLen)))
 
 #    unittest.main()
