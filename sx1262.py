@@ -474,7 +474,7 @@ def flora_toa(modIdx, phyPlLen):
         fskconfig = FskConfig()
         fskconfig.bitrate = mod['datarate']
         fskconfig.nPreambleBits = 8*mod['preambleLen']
-        fskconfig.nSyncwordBytes = 4
+        fskconfig.nSyncwordBytes = 3
         fskconfig.nLengthBytes = 1
         fskconfig.nAddressBytes = 0
         fskconfig.phyPl = phyPlLen
