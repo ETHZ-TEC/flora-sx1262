@@ -14,7 +14,7 @@ Calculations are based on the data sheet for SX126x LoRa tranceiver chips.
 """
 
 import numpy as np
-import json
+from enum import IntEnum, unique
 import unittest
 
 minPlOverhead = 13 # bytes
@@ -75,10 +75,10 @@ class LoraConfig(object):
         sub = 2 if ( (self.sf not in (5, 6)) and self.lowDataRate) else 0
         syncSyms = 6.25 if (self.sf in (5, 6)) else 4.25
         nBitCrc = 16 if self.crc else 0
-        nSymbolHeader = 0 if self.ih else 20
+        nBitHeader = 0 if self.ih else 20
         constVal = 0 if (self.sf in (5, 6)) else 8
 
-        arg1 = 8*self.phyPl + nBitCrc - 4*self.sf + nSymbolHeader + constVal
+        arg1 = 8*self.phyPl + nBitCrc - 4*self.sf + nBitHeader + constVal
         ceilPart = np.ceil(max(arg1, 0)/(4*(self.sf - sub)))
         nSymbol = self.nPreambleSyms + syncSyms + 8 + ceilPart*(self.cr + 4)
         toa = (2**(self.sf) / self.bw) * nSymbol
@@ -359,88 +359,98 @@ def getSensitivity(mod, datarate):
     else:
         return None
 
+@unique
+class Modems(IntEnum):
+    MODEM_FSK  = 0
+    MODEM_LORA = 1
 
-flora_radio_constants_json = """
-[
+@unique
+class LoraCodingRates(IntEnum):
+    LORA_CR_4_5  = 0x01,
+    LORA_CR_4_6  = 0x02,
+    LORA_CR_4_7  = 0x03,
+    LORA_CR_4_8  = 0x04,
+
+
+flora_radio_constants = [
         {
-            "modem": "MODEM_LORA",
+            "modem": Modems.MODEM_LORA,
             "bandwidth": 0,
             "datarate": 12,
-            "coderate": 5,
+            "coderate": LoraCodingRates.LORA_CR_4_5,
             "preambleLen": 10
         },
         {
-            "modem": "MODEM_LORA",
+            "modem": Modems.MODEM_LORA,
             "bandwidth": 0,
             "datarate": 11,
-            "coderate": 5,
+            "coderate": LoraCodingRates.LORA_CR_4_5,
             "preambleLen": 10
         },
         {
-            "modem": "MODEM_LORA",
+            "modem": Modems.MODEM_LORA,
             "bandwidth": 0,
             "datarate": 10,
-            "coderate": 5,
+            "coderate": LoraCodingRates.LORA_CR_4_5,
             "preambleLen": 10
         },
         {
-            "modem": "MODEM_LORA",
+            "modem": Modems.MODEM_LORA,
             "bandwidth": 0,
             "datarate": 9,
-            "coderate": 5,
+            "coderate": LoraCodingRates.LORA_CR_4_5,
             "preambleLen": 10
         },
         {
-            "modem": "MODEM_LORA",
+            "modem": Modems.MODEM_LORA,
             "bandwidth": 0,
             "datarate": 8,
-            "coderate": 5,
+            "coderate": LoraCodingRates.LORA_CR_4_5,
             "preambleLen": 10
         },
         {
-            "modem": "MODEM_LORA",
+            "modem": Modems.MODEM_LORA,
             "bandwidth": 0,
             "datarate": 7,
-            "coderate": 5,
+            "coderate": LoraCodingRates.LORA_CR_4_5,
             "preambleLen": 10
         },
         {
-            "modem": "MODEM_LORA",
+            "modem": Modems.MODEM_LORA,
             "bandwidth": 0,
             "datarate": 6,
-            "coderate": 5,
+            "coderate": LoraCodingRates.LORA_CR_4_5,
             "preambleLen": 12
         },
         {
-            "modem": "MODEM_LORA",
+            "modem": Modems.MODEM_LORA,
             "bandwidth": 0,
             "datarate": 5,
-            "coderate": 5,
+            "coderate": LoraCodingRates.LORA_CR_4_5,
             "preambleLen": 12
         },
         {
-            "modem": "MODEM_FSK",
+            "modem": Modems.MODEM_FSK,
             "bandwidth": 234300,
             "datarate": 125000,
             "fdev": 50000,
             "preambleLen": 2
         },
         {
-            "modem": "MODEM_FSK",
+            "modem": Modems.MODEM_FSK,
             "bandwidth": 234300,
             "datarate": 200000,
             "fdev": 10000,
             "preambleLen": 2
         },
         {
-            "modem": "MODEM_FSK",
+            "modem": Modems.MODEM_FSK,
             "bandwidth": 312000,
             "datarate": 250000,
             "fdev": 23500,
             "preambleLen": 4
         }
 ]
-"""
 
 def flora_toa(modIdx, phyPlLen):
     """Calculates the time-on-air of a transmission.
@@ -450,7 +460,7 @@ def flora_toa(modIdx, phyPlLen):
     Returns:
         Time-on-air of a single packet in seconds.
     """
-    mods = json.loads(flora_radio_constants_json)
+    mods = flora_radio_constants
     mod = mods[modIdx]
 
     def mapBw(bw):
@@ -459,18 +469,18 @@ def flora_toa(modIdx, phyPlLen):
         elif bw == 2: return 500000
         else: raise Exception('ERROR: undefined bandwidth!')
 
-    if mod['modem'] == "MODEM_LORA":
+    if mod['modem'] == Modems.MODEM_LORA:
         loraconfig = LoraConfig()
         loraconfig.bw = mapBw(mod['bandwidth'])
         loraconfig.sf = mod['datarate']
         loraconfig.phyPl = phyPlLen
-        loraconfig.cr = mod['coderate'] - 4
+        loraconfig.cr = mod['coderate']
         loraconfig.ih = False
         loraconfig.lowDataRate = True if mod['datarate'] in [11, 12] else False
         loraconfig.crc = True
         loraconfig.nPreambleSyms = mod['preambleLen']
         return loraconfig.timeOnAir
-    elif mod['modem'] == "MODEM_FSK":
+    elif mod['modem'] == Modems.MODEM_FSK:
         fskconfig = FskConfig()
         fskconfig.bitrate = mod['datarate']
         fskconfig.nPreambleBits = 8*mod['preambleLen']
@@ -492,7 +502,7 @@ class TestTimeOnAirMethods(unittest.TestCase):
             bw=125000,
             phyPl=12,
             nPreambleSyms=8,
-            cr=1,
+            cr=LoraCodingRates.LORA_CR_4_5,
             ih=False,
             crc=True,
             lowDataRate=False
@@ -509,7 +519,7 @@ class TestTimeOnAirMethods(unittest.TestCase):
             bw=125000,
             phyPl=12,
             nPreambleSyms=8,
-            cr=1,
+            cr=LoraCodingRates.LORA_CR_4_5,
             ih=False,
             crc=True,
             lowDataRate=False
@@ -525,7 +535,7 @@ class TestTimeOnAirMethods(unittest.TestCase):
         loraconfig.bw = 125000
         loraconfig.sf = 7
         loraconfig.phyPl = 12
-        loraconfig.cr = 1
+        loraconfig.cr = LoraCodingRates.LORA_CR_4_5
         loraconfig.ih = False
         loraconfig.lowDataRate = False
         loraconfig.crc = True
@@ -538,30 +548,30 @@ class TestTimeOnAirMethods(unittest.TestCase):
 
 
 if __name__ == '__main__':
-#    fskconfig = FskConfig()
-#    fskconfig.bitrate = 250000
-#    fskconfig.nPreambleBits = 16
-#    fskconfig.nSyncwordBytes = 2
-#    fskconfig.nLengthBytes = 1
-#    fskconfig.nAddressBytes = 1
-#    fskconfig.phyPl = 6
-#    fskconfig.nCrcBytes = 1
-#    print(fskconfig.timeOnAir)
+    # fskconfig = FskConfig()
+    # fskconfig.bitrate = 250000
+    # fskconfig.nPreambleBits = 16
+    # fskconfig.nSyncwordBytes = 2
+    # fskconfig.nLengthBytes = 1
+    # fskconfig.nAddressBytes = 1
+    # fskconfig.phyPl = 6
+    # fskconfig.nCrcBytes = 1
+    # print(fskconfig.timeOnAir)
 
-    # loraconfig = LoraConfig()
-    # loraconfig.bw = 125000
-    # loraconfig.sf = 12
-    # loraconfig.phyPl = 11
-    # loraconfig.cr = 1
-    # loraconfig.ih = False
-    # loraconfig.lowDataRate = True
-    # loraconfig.crc = True
-    # loraconfig.nPreambleSyms = 10
-    # print('Time-on-air (custom): {:.6f}s'.format(loraconfig.timeOnAir))
+    loraconfig = LoraConfig()
+    loraconfig.bw = 125000
+    loraconfig.sf = 12
+    loraconfig.phyPl = 2
+    loraconfig.cr = LoraCodingRates.LORA_CR_4_5
+    loraconfig.ih = False
+    loraconfig.lowDataRate = False
+    loraconfig.crc = 0
+    loraconfig.nPreambleSyms = 12
+    print('Time-on-air (custom): {:.6f}s'.format(loraconfig.timeOnAir))
 
 
-    modIdx = 10   # modulation (as defined in radio_constants.c)
-    phyPlLen = 0  # in bytes
-    print('Time-on-air (mod={}, phyPlLen={}): {:.6f}s'.format(modIdx, phyPlLen, flora_toa(modIdx, phyPlLen)))
+    # modIdx = 7   # modulation (as defined in radio_constants.c)
+    # phyPlLen = 5  # in bytes
+    # print('Time-on-air (mod={}, phyPlLen={}): {:.6f}s'.format(modIdx, phyPlLen, flora_toa(modIdx, phyPlLen)))
 
-#    unittest.main()
+    # unittest.main()
