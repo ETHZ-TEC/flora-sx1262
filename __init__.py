@@ -9,5 +9,6 @@ Python module file.
 
 """
 
-from .sx1262 import LoraConfig, FskConfig, getConfigTxPowerLevels
+from .sx1262 import LoraConfig, FskConfig, RadioConfig, getConfigTxPowerLevels
 from .sx1262 import getTxPower, getRxPower, getSensitivity
+from .sx1262 import getFloraConfig, getFloraToa

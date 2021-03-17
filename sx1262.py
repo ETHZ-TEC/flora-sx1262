@@ -21,7 +21,13 @@ minPlOverhead = 13 # bytes
 adrReqOvh = 4 # bytes
 adrAnsOvh = 1 # bytes
 
-class LoraConfig(object):
+class RadioConfig(object):
+    '''Dummy parent class
+    '''
+    def __init__(self):
+        pass
+
+class LoraConfig(RadioConfig):
     def __init__(self, bw=None, sf=None, phyPl=None, cr=1, ih=True, lowDataRate=False, crc=True, nPreambleSyms=None):
         """
         Args:
@@ -94,7 +100,7 @@ class LoraConfig(object):
         return getSensitivity(mod='lora', datarate=self.sf)
 
 
-class FskConfig(object):
+class FskConfig(RadioConfig):
     def __init__(self, bitrate=None, nPreambleBits=None, nSyncwordBytes=None, nLengthBytes=None, nAddressBytes=None, phyPl=None, nCrcBytes=None):
         """
         Args:
@@ -452,16 +458,15 @@ flora_radio_constants = [
         }
 ]
 
-def flora_toa(modIdx, phyPlLen):
-    """Calculates the time-on-air of a transmission.
+def getFloraConfig(modIdx, phyPlLen=None):
+    """Returns a radio config object based on the flora modIdx.
     Args:
         modIdx: index of modulation radio_modulations struct array as defined in radio_constants.c
         phyPlLen: physical layer payload (in bytes)
     Returns:
-        Time-on-air of a single packet in seconds.
+        radio config object
     """
-    mods = flora_radio_constants
-    mod = mods[modIdx]
+    mod = flora_radio_constants[modIdx]
 
     def mapBw(bw):
         if bw == 0: return 125000
@@ -479,7 +484,7 @@ def flora_toa(modIdx, phyPlLen):
         loraconfig.lowDataRate = True if mod['datarate'] in [11, 12] else False
         loraconfig.crc = True
         loraconfig.nPreambleSyms = mod['preambleLen']
-        return loraconfig.timeOnAir
+        return loraconfig
     elif mod['modem'] == Modems.MODEM_FSK:
         fskconfig = FskConfig()
         fskconfig.bitrate = mod['datarate']
@@ -489,10 +494,20 @@ def flora_toa(modIdx, phyPlLen):
         fskconfig.nAddressBytes = 0
         fskconfig.phyPl = phyPlLen
         fskconfig.nCrcBytes = 2
-        return fskconfig.timeOnAir
+        return fskconfig
     else:
         raise Exception('ERROR: invalid modulation!')
 
+def getFloraToa(modIdx, phyPlLen):
+    """Calculates the time-on-air of a transmission.
+    Args:
+        modIdx: index of modulation radio_modulations struct array as defined in radio_constants.c
+        phyPlLen: physical layer payload (in bytes)
+    Returns:
+        Time-on-air of a single packet in seconds.
+    """
+    config = getFloraConfig(modIdx, phyPlLen)
+    return config.timeOnAir
 
 class TestTimeOnAirMethods(unittest.TestCase):
 
@@ -558,20 +573,20 @@ if __name__ == '__main__':
     # fskconfig.nCrcBytes = 1
     # print(fskconfig.timeOnAir)
 
-    loraconfig = LoraConfig()
-    loraconfig.bw = 125000
-    loraconfig.sf = 12
-    loraconfig.phyPl = 2
-    loraconfig.cr = LoraCodingRates.LORA_CR_4_5
-    loraconfig.ih = False
-    loraconfig.lowDataRate = False
-    loraconfig.crc = 0
-    loraconfig.nPreambleSyms = 12
-    print('Time-on-air (custom): {:.6f}s'.format(loraconfig.timeOnAir))
+    # loraconfig = LoraConfig()
+    # loraconfig.bw = 125000
+    # loraconfig.sf = 12
+    # loraconfig.phyPl = 2
+    # loraconfig.cr = LoraCodingRates.LORA_CR_4_5
+    # loraconfig.ih = False
+    # loraconfig.lowDataRate = False
+    # loraconfig.crc = 0
+    # loraconfig.nPreambleSyms = 12
+    # print('Time-on-air (custom): {:.6f}s'.format(loraconfig.timeOnAir))
 
 
-    # modIdx = 7   # modulation (as defined in radio_constants.c)
-    # phyPlLen = 5  # in bytes
-    # print('Time-on-air (mod={}, phyPlLen={}): {:.6f}s'.format(modIdx, phyPlLen, flora_toa(modIdx, phyPlLen)))
+    modIdx = 7   # modulation (as defined in radio_constants.c)
+    phyPlLen = 5  # in bytes
+    print('Time-on-air (mod={}, phyPlLen={}): {:.6f}s'.format(modIdx, phyPlLen, getFloraToa(modIdx, phyPlLen)))
 
     # unittest.main()
