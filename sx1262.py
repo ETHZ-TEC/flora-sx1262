@@ -379,42 +379,42 @@ class LoraCodingRates(IntEnum):
 
 
 flora_radio_constants = [
-        {
+        { # 0 (SF12)
             "modem": Modems.MODEM_LORA,
             "bandwidth": 0,
             "datarate": 12,
             "coderate": LoraCodingRates.LORA_CR_4_5,
             "preambleLen": 10
         },
-        {
+        { # 1 (SF11)
             "modem": Modems.MODEM_LORA,
             "bandwidth": 0,
             "datarate": 11,
             "coderate": LoraCodingRates.LORA_CR_4_5,
             "preambleLen": 10
         },
-        {
+        { # 2 (SF10)
             "modem": Modems.MODEM_LORA,
             "bandwidth": 0,
             "datarate": 10,
             "coderate": LoraCodingRates.LORA_CR_4_5,
             "preambleLen": 10
         },
-        {
+        { # 3 (SF9)
             "modem": Modems.MODEM_LORA,
             "bandwidth": 0,
             "datarate": 9,
             "coderate": LoraCodingRates.LORA_CR_4_5,
             "preambleLen": 10
         },
-        {
+        { # 4 (SF8)
             "modem": Modems.MODEM_LORA,
             "bandwidth": 0,
             "datarate": 8,
             "coderate": LoraCodingRates.LORA_CR_4_5,
             "preambleLen": 10
         },
-        {
+        { # 5 (SF7)
             "modem": Modems.MODEM_LORA,
             "bandwidth": 0,
             "datarate": 7,
@@ -428,35 +428,84 @@ flora_radio_constants = [
             "coderate": LoraCodingRates.LORA_CR_4_5,
             "preambleLen": 12
         },
-        {
+        { # 6 (SF6)
             "modem": Modems.MODEM_LORA,
             "bandwidth": 0,
             "datarate": 5,
             "coderate": LoraCodingRates.LORA_CR_4_5,
             "preambleLen": 12
         },
-        {
+        { # 7 (SF5)
             "modem": Modems.MODEM_FSK,
             "bandwidth": 234300,
             "datarate": 125000,
             "fdev": 50000,
             "preambleLen": 2
         },
-        {
+        { # 9 (FSK 200k)
             "modem": Modems.MODEM_FSK,
             "bandwidth": 234300,
             "datarate": 200000,
             "fdev": 10000,
             "preambleLen": 2
         },
-        {
+        { # 10 (FSK 250k)
             "modem": Modems.MODEM_FSK,
             "bandwidth": 312000,
             "datarate": 250000,
             "fdev": 23500,
             "preambleLen": 4
-        }
+        },
 ]
+
+gloria_timings = [
+    { # 0 (SF12)
+        'slotOverhead': 4179556/8e6,
+        'floodInitOverhead': 795938/8e6
+    },
+    { # 1 (SF11)
+        'slotOverhead': 2132075/8e6,
+        'floodInitOverhead': 402722/8e6
+    },
+    { # 2 (SF10)
+        'slotOverhead': 1050062/8e6,
+        'floodInitOverhead': 206114/8e6
+    },
+    { # 3 (SF9)
+        'slotOverhead': 537151/8e6,
+        'floodInitOverhead': 107810/8e6
+    },
+    { # 4 (SF8)
+        'slotOverhead': 283375/8e6,
+        'floodInitOverhead': 58658/8e6
+    },
+    { # 5 (SF7)
+        'slotOverhead': 153639/8e6,
+        'floodInitOverhead': 34082/8e6
+    },
+    { # 6 (SF6)
+        'slotOverhead': 79827/8e6,
+        'floodInitOverhead': 32507/8e6
+    },
+    { # 7 (SF5)
+        'slotOverhead': 50171/8e6,
+        'floodInitOverhead': 21007/8e6
+    },
+    { # 8 (FSK 125k)
+        'slotOverhead': 28000/8e6,
+        'floodInitOverhead': 18000/8e6
+    },
+    { # 9 (FSK 200k)
+        'slotOverhead': 26400/8e6,
+        'floodInitOverhead': 18000/8e6
+    },
+    { # 10 (FSK 250k)
+        'slotOverhead': 14000/8e6,
+        'floodInitOverhead': 18000/8e6
+    },
+]
+
+GLORIA_FLOOD_FINISH_OVERHEAD = 152/8e6
 
 def getFloraConfig(modIdx, phyPlLen=None):
     """Returns a radio config object based on the flora modIdx.
@@ -508,6 +557,23 @@ def getFloraToa(modIdx, phyPlLen):
     """
     config = getFloraConfig(modIdx, phyPlLen)
     return config.timeOnAir
+
+def getGloriaFloodDuration(modIdx, phyPlLen, nTx, numHops):
+    """Calculates the duration of a gloria flood.
+    Args:
+        modIdx: index of modulation radio_modulations struct array as defined in radio_constants.c
+        phyPlLen: physical layer payload (in bytes)
+        nTx: number of retransmissions
+        numHops: number of hops (proportional to network diameter)
+    Returns:
+        Duration of the Gloria flood in seconds.
+    """
+    config = getFloraConfig(modIdx, phyPlLen)
+    timing = gloria_timings[modIdx]
+    toa =  config.timeOnAir
+    slotTime = toa + timing['slotOverhead']
+    numSlots = nTx + numHops - 1
+    return timing['floodInitOverhead'] + GLORIA_FLOOD_FINISH_OVERHEAD + numSlots * slotTime
 
 class TestTimeOnAirMethods(unittest.TestCase):
 
@@ -588,5 +654,11 @@ if __name__ == '__main__':
     modIdx = 7   # modulation (as defined in radio_constants.c)
     phyPlLen = 5  # in bytes
     print('Time-on-air (mod={}, phyPlLen={}): {:.6f}s'.format(modIdx, phyPlLen, getFloraToa(modIdx, phyPlLen)))
+
+    nTx = 3
+    numHops = 6
+    modIdx = 10   # modulation (as defined in radio_constants.c)
+    phyPlLen = 6  # in bytes
+    print('Gloria Flood Duration (mod={}, phyPlLen={}, nTx={}, phyPlLen={}): {:.6f}s'.format(modIdx, phyPlLen, nTx, numHops, getGloriaFloodDuration(modIdx, phyPlLen, nTx, numHops)))
 
     # unittest.main()
