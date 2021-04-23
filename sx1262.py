@@ -25,7 +25,7 @@ class RadioConfig(object):
     '''Dummy parent class
     '''
     def __init__(self):
-        pass
+        raise Exception('ERROR: The \'RadioConfig\' class is a template and should not be used directly!')
 
 class LoraConfig(RadioConfig):
     def __init__(self, bw=None, sf=None, phyPl=None, cr=1, ih=True, lowDataRate=False, crc=True, nPreambleSyms=None):
