@@ -101,7 +101,7 @@ class LoraConfig(RadioConfig):
 
 
 class FskConfig(RadioConfig):
-    def __init__(self, bitrate=None, nPreambleBits=None, nSyncwordBytes=None, nLengthBytes=None, nAddressBytes=None, phyPl=None, nCrcBytes=None):
+    def __init__(self, bitrate=None, nPreambleBits=None, nSyncwordBytes=None, nLengthBytes=None, nAddressBytes=None, phyPl=None, nCrcBytes=None, bw=None):
         """
         Args:
             bitrate: bit rate in bits/sec
@@ -119,6 +119,7 @@ class FskConfig(RadioConfig):
         self.nAddressBytes = nAddressBytes
         self.phyPl = phyPl
         self.nCrcBytes = nCrcBytes
+        self.bw = bw
 
         self._bitrateRange = (600, 300000)
         self._nPreambleBitsRange = (8, 65535)
@@ -421,21 +422,21 @@ flora_radio_constants = [
             "coderate": LoraCodingRates.LORA_CR_4_5,
             "preambleLen": 10
         },
-        {
+        { # 6 (SF6)
             "modem": Modems.MODEM_LORA,
             "bandwidth": 0,
             "datarate": 6,
             "coderate": LoraCodingRates.LORA_CR_4_5,
             "preambleLen": 12
         },
-        { # 6 (SF6)
+        { # 7 (SF5)
             "modem": Modems.MODEM_LORA,
             "bandwidth": 0,
             "datarate": 5,
             "coderate": LoraCodingRates.LORA_CR_4_5,
             "preambleLen": 12
         },
-        { # 7 (SF5)
+        { # 8 (FSK 125k)
             "modem": Modems.MODEM_FSK,
             "bandwidth": 234300,
             "datarate": 125000,
@@ -543,6 +544,7 @@ def getFloraConfig(modIdx, phyPlLen=None):
         fskconfig.nAddressBytes = 0
         fskconfig.phyPl = phyPlLen
         fskconfig.nCrcBytes = 2
+        fskconfig.bw = mod['bandwidth']
         return fskconfig
     else:
         raise Exception('ERROR: invalid modulation!')
@@ -637,6 +639,7 @@ if __name__ == '__main__':
     # fskconfig.nAddressBytes = 1
     # fskconfig.phyPl = 6
     # fskconfig.nCrcBytes = 1
+    # fskconfig.bw = 312000 # has no influence on timeOnAir
     # print(fskconfig.timeOnAir)
 
     # loraconfig = LoraConfig()
