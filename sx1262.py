@@ -49,6 +49,8 @@ class LoraConfig(RadioConfig):
         self.crc = crc                      # CRC enabled
         self.nPreambleSyms = nPreambleSyms  # number of symbols in the preamble
 
+        self.floraModIdx = None
+
         self._bwList = [  7810,
                          10420,
                          15630,
@@ -99,6 +101,12 @@ class LoraConfig(RadioConfig):
         """
         return getSensitivity(mod='lora', datarate=self.sf)
 
+    def __str__(self):
+        return 'LoRa_SF{}'.format(self.sf)
+
+    def __repr__(self):
+        return str(self)
+
 
 class FskConfig(RadioConfig):
     def __init__(self, bitrate=None, nPreambleBits=None, nSyncwordBytes=None, nLengthBytes=None, nAddressBytes=None, phyPl=None, nCrcBytes=None, bw=None):
@@ -120,6 +128,8 @@ class FskConfig(RadioConfig):
         self.phyPl = phyPl
         self.nCrcBytes = nCrcBytes
         self.bw = bw
+
+        self.floraModIdx = None
 
         self._bitrateRange = (600, 300000)
         self._nPreambleBitsRange = (8, 65535)
@@ -178,6 +188,15 @@ class FskConfig(RadioConfig):
             Radio sensitivity in dBm
         """
         return getSensitivity(mod='fsk', datarate=self.bitrate)
+
+    def __str__(self):
+        if self.bitrate < 1e3:
+            return 'FSK_{}bps'.format(self.bitrate)
+        else:
+            return 'FSK_{:.0f}kbps'.format(self.bitrate/1e3)
+
+    def __repr__(self):
+        return str(self)
 
 ################################################################################
 
@@ -534,6 +553,7 @@ def getFloraConfig(modIdx, phyPlLen=None):
         loraconfig.lowDataRate = True if mod['datarate'] in [11, 12] else False
         loraconfig.crc = True
         loraconfig.nPreambleSyms = mod['preambleLen']
+        loraconfig.floraModIdx = modIdx
         return loraconfig
     elif mod['modem'] == Modems.MODEM_FSK:
         fskconfig = FskConfig()
@@ -545,6 +565,7 @@ def getFloraConfig(modIdx, phyPlLen=None):
         fskconfig.phyPl = phyPlLen
         fskconfig.nCrcBytes = 2
         fskconfig.bw = mod['bandwidth']
+        fskconfig.floraModIdx = modIdx
         return fskconfig
     else:
         raise Exception('ERROR: invalid modulation!')
