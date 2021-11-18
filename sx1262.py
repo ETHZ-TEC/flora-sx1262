@@ -77,7 +77,9 @@ class LoraConfig(RadioConfig):
         self.crc = crc                      # CRC enabled
         self.nPreambleSyms = nPreambleSyms  # number of symbols in the preamble
 
-        self.floraModIdx = None
+        self.floraModIdx             = None
+        self.txPower                 = None
+        self.sensitivitySrcDatasheet = True
 
         self._bwList = [  7810,
                          10420,
@@ -127,7 +129,7 @@ class LoraConfig(RadioConfig):
         Returns:
             Radio sensitivity in dBm
         """
-        return getSensitivity(mod='lora', datarate=self.sf)
+        return getSensitivity(mod='lora', datarate=self.sf, srcDatasheet=self.sensitivitySrcDatasheet)
 
     def __str__(self):
         return 'LoRa_SF{}'.format(self.sf)
@@ -157,7 +159,9 @@ class FskConfig(RadioConfig):
         self.nCrcBytes = nCrcBytes
         self.bw = bw
 
-        self.floraModIdx = None
+        self.floraModIdx             = None
+        self.txPower                 = None
+        self.sensitivitySrcDatasheet = True
 
         self._bitrateRange = (600, 300000)
         self._nPreambleBitsRange = (8, 65535)
@@ -215,7 +219,7 @@ class FskConfig(RadioConfig):
         Returns:
             Radio sensitivity in dBm
         """
-        return getSensitivity(mod='fsk', datarate=self.bitrate)
+        return getSensitivity(mod='fsk', datarate=self.bitrate, srcDatasheet=self.sensitivitySrcDatasheet)
 
     def __str__(self):
         if self.bitrate < 1e3:
@@ -398,20 +402,37 @@ def getRxPower():
     return 0.005*3.3 # in Watt
 
 
-def getSensitivity(mod, datarate):
+def getSensitivity(mod, datarate, srcDatasheet=True):
     '''Returns the receive sensitivity levels.
-    LoRa: Linear interpolation/extrapolation based on datasheet values for 125kHz: -124 dBm for SF7, -137 dBm for SF12
-    FSK: Log interpolation/extrapolation based on datasheets values
-    TODO: improved values based on measurements.
+    Args:
+      mod:          modulation, allowed values: ['fsk', 'lora']
+      datarate:     speed with which data is transmitted (mod=='fsk': bit rate; mod=='lora': spreading factor)
+      srcDatasheet: source of the sensitivity values
+                    True: use values based on datasheet
+                        LoRa: Linear interpolation/extrapolation based on datasheet values for 125kHz: -124 dBm for SF7, -137 dBm for SF12
+                        FSK: Log interpolation/extrapolation based on datasheets values
+                    False: use values based on measurements (comparison of link budget of simulation to tests on fl2 testbed).
+                        To account for losses (no separation of Rx/Tx path, RF switch insertion loss, etc.)
+                        NOTE: most probably sensitivity is lower (i.e. better) in reality; part of the reduced performance should be attributed to non-ideal transmission (effectively radiated power is less than configured Tx power)
     '''
+    # get values based on interpolation of datasheet values
+    ret = None
     if mod == 'fsk':
         bitrate = datarate
-        return 3.614*np.log(bitrate) - 148.285
+        ret =  3.614*np.log(bitrate) - 148.285
     elif mod == 'lora':
         sf = datarate
-        return sf*(-2.6) - 105.8
+        ret = sf*(-2.6) - 105.8
     else:
-        return None
+        raise Exception('Unknown modulation \'{}\'!'.format(mod))
+
+    # apply correction based on measurements
+    if not srcDatasheet:
+        if mod == 'fsk':
+             ret+= 5
+        ret += 10
+
+    return ret
 
 @unique
 class Modems(IntEnum):
@@ -701,7 +722,6 @@ if __name__ == '__main__':
     # loraconfig.crc = 0
     # loraconfig.nPreambleSyms = 12
     # print('Time-on-air (custom): {:.6f}s'.format(loraconfig.timeOnAir))
-
 
     modIdx = 7   # modulation (as defined in radio_constants.c)
     phyPlLen = 5  # in bytes
