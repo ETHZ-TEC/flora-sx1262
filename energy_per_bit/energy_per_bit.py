@@ -58,8 +58,8 @@ def hata_pathlossToDistance(pathloss):
     Args
         pathloss: pathloss in dB (positive means loss, negative means gain)
     '''
-    # path loss based on Hata model (sub-urban)
-    L_SU = pathloss # path loss sub-urban
+    # path loss based on Hata model (suburban)
+    L_SU = pathloss # path loss suburban
     f = 868e6
     h_B = 18 # Height of base station antenna. Unit: meter (m)
     h_M = 18 # Height of mobile station antenna. Unit: meter (m)
@@ -75,12 +75,12 @@ def hata_distanceToPathloss(distance):
         distance: distance in meters
     '''
     f = 868e6
-    # path loss based on Hata model (sub-urban)
+    # path loss based on Hata model (suburban)
     h_B = 18 # Height of base station antenna. Unit: meter (m)
     h_M = 18 # Height of mobile station antenna. Unit: meter (m)
     C_h = 0.8 + (1.1*np.log10(f) - 0.7)*h_M - 1.56*np.log10(f) # Antenna height correction factor for small/medium city
     L_U = 69.55 + 26.16*np.log10(f) - 13.82*np.log10(h_B) - C_h + (44.9 - 6.55*np.log10(h_B))*np.log10(distance) # path loss urban
-    L_SU = L_U - 2*(np.log10(f/28))**2 - 5.4 # path loss sub-urban
+    L_SU = L_U - 2*(np.log10(f/28))**2 - 5.4 # path loss suburban
 
     return L_SU
 
@@ -103,7 +103,7 @@ def test_pathloss():
     distance1 = 500
     print('distance1: {}'.format(distance1))
     pathloss = hata_distanceToPathloss(distance1)
-    print('hata sub-urban pathloss: {}'.format(pathloss))
+    print('hata suburban pathloss: {}'.format(pathloss))
     distance2 = hata_pathlossToDistance(pathloss)
     print('distance2: {}'.format(distance2))
     distance1 = 500
@@ -321,7 +321,7 @@ if __name__ == "__main__":
     configPwrList = [-9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]
     payloadSize = 20 # in Bytes
     pointSelection = 'reachable' # 'border' (max distance) or 'reachable' (reachable configuration)
-    pathlossModel = 'friis' # 'friis' (Friis free-space pathloss model) or 'hata' (Hata sub-urban path loss model)
+    pathlossModel = 'friis' # 'friis' (Friis free-space pathloss model) or 'hata' (Hata suburban path loss model)
     numPoints = 10000
 
     plotPoints(

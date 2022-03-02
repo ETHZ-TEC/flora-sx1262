@@ -37,7 +37,7 @@ The purpose of the LoraConfig class is to store one specific LoRa PHY
 configuration and calculate the time-on-air for that specific LoRa
 configuration.
 
-Calculations are based on the data sheet for SX126x LoRa tranceiver chips.
+Calculations are based on the data sheet for SX126x LoRa transceiver chips.
 
 """
 
@@ -60,7 +60,7 @@ class LoraConfig(RadioConfig):
         """
         Args:
             sf: spreading factor (5 to 12)
-            bw: bandwdith in Hertz (e.g. 125000)
+            bw: bandwidth in Hertz (e.g. 125000)
             phyPl: physical layer payload in bytes (1 to 255)
             numPreambleSyms: number of preamble symbols (6 to 65535)
             cr: coding rate value (1 to 4) (cr=1 coding rate of 4/5; cr=4 coding rate of 4/8)
@@ -234,7 +234,7 @@ class FskConfig(RadioConfig):
 
 # power mapping based on measurements on the ETZ roof with DevBoard (3V supply), and half-wave antenna, and Rocketlogger, 27.3.2019
 # NOTE: value for +22dBm has not been measured
-# NOTE: MCU was runnig during measurement (according to code used)
+# NOTE: MCU was running during measurement (according to code used)
 originalPowerMapping = {
     -9: 0.102232706962291,
     -8: 0.10605795151005062,
@@ -393,7 +393,7 @@ def getTxPower(configPwr):
       configPwr: configured power level (in dBm)
     '''
 
-    assert configPwr >= min(powerMapping.keys()) and configPwr <= max(powerMapping.keys())
+    assert min(powerMapping.keys()) <= configPwr <= max(powerMapping.keys())
     return powerMapping[configPwr]
 
 def getRxPower():
