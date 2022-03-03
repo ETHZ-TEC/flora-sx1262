@@ -36,256 +36,273 @@ POSSIBILITY OF SUCH DAMAGE.
 
 import random
 import sys
-import numpy as np
+import numpy  as np
 import pandas as pd
 
-from bokeh.io import output_file, show
-from bokeh.models import ColumnDataSource, HoverTool, LinearColorMapper, CategoricalColorMapper
-from bokeh.palettes import plasma
-from bokeh.plotting import figure
+from bokeh.io        import output_file, show
+from bokeh.models    import ColumnDataSource, HoverTool, LinearColorMapper, CategoricalColorMapper
+from bokeh.palettes  import plasma
+from bokeh.plotting  import figure
 from bokeh.transform import transform
 
-sys.path.append("..") # Adds higher directory to python modules path.
+sys.path.append("..")  # Adds higher directory to python modules path.
 from sx1262 import *
 
 
 ################################################################################
-# Pathloss model
+# Path loss model
 ################################################################################
 
 def hata_pathlossToDistance(pathloss):
-    '''
+    """
     Args
-        pathloss: pathloss in dB (positive means loss, negative means gain)
-    '''
-    # path loss based on Hata model (suburban)
-    L_SU = pathloss # path loss suburban
-    f = 868e6
-    h_B = 18 # Height of base station antenna. Unit: meter (m)
-    h_M = 18 # Height of mobile station antenna. Unit: meter (m)
-    C_h = 0.8 + (1.1*np.log10(f) - 0.7)*h_M - 1.56*np.log10(f) # Antenna height correction factor for small/medium city
-    L_U = 2*(np.log10(f/28))**2 + 5.4 + L_SU
-    distance = 10**( (L_U - 69.55 - 26.16*np.log10(f) + 13.82*np.log10(h_B) + C_h)/(44.9 - 6.55*np.log10(h_B)) )
+        pathloss: path loss in dB (positive means loss, negative means gain)
+    """
+    # Path loss based on Hata model (suburban)
+    L_SU = pathloss                                             # Path loss suburban
+    f    = 868e6
+    h_B  = 18                                                    # Height of base station antenna. Unit: meter (m)
+    h_M  = 18                                                    # Height of mobile station antenna. Unit: meter (m)
+    C_h  = 0.8 + (1.1*np.log10(f) - 0.7)*h_M - 1.56*np.log10(f)  # Antenna height correction factor for small/medium city
+    L_U  = 2 * (np.log10(f/28))**2 + 5.4 + L_SU
+    dist = 10**( (L_U - 69.55 - 26.16*np.log10(f) + 13.82*np.log10(h_B) + C_h) / (44.9 - 6.55*np.log10(h_B)) )
 
-    return distance
+    return dist
+
 
 def hata_distanceToPathloss(distance):
-    '''
+    """
     Args
         distance: distance in meters
-    '''
-    f = 868e6
-    # path loss based on Hata model (suburban)
-    h_B = 18 # Height of base station antenna. Unit: meter (m)
-    h_M = 18 # Height of mobile station antenna. Unit: meter (m)
-    C_h = 0.8 + (1.1*np.log10(f) - 0.7)*h_M - 1.56*np.log10(f) # Antenna height correction factor for small/medium city
-    L_U = 69.55 + 26.16*np.log10(f) - 13.82*np.log10(h_B) - C_h + (44.9 - 6.55*np.log10(h_B))*np.log10(distance) # path loss urban
-    L_SU = L_U - 2*(np.log10(f/28))**2 - 5.4 # path loss suburban
+    """
+    # Path loss based on Hata model (suburban)
+    f    = 868e6
+    h_B  = 18                                                    # Height of base station antenna. Unit: meter (m)
+    h_M  = 18                                                    # Height of mobile station antenna. Unit: meter (m)
+    C_h  = 0.8 + (1.1*np.log10(f) - 0.7)*h_M - 1.56*np.log10(f)  # Antenna height correction factor for small/medium city
+    L_U  = 69.55 + 26.16*np.log10(f) - 13.82*np.log10(h_B) - C_h + (44.9 - 6.55*np.log10(h_B)) * np.log10(distance)  # Path loss urban
+    L_SU = L_U - 2 * (np.log10(f/28))**2 - 5.4                   # Path loss suburban
 
     return L_SU
 
+
 def friis_pathlossToDistance(pathloss):
-    # pathloss in dB based on Friis Transmission Formula
-    f = 868e6
+    # Path loss in dB based on Friis Transmission Formula
+    f          = 868e6
     lambdaSymb = 3e8 / f
-    distance = (lambdaSymb*10**(pathloss/20))/(4*np.pi)
+    distance   = (lambdaSymb*10**(pathloss/20)) / (4 * np.pi)
+
     return distance
 
+
 def friis_distanceToPathloss(distance):
-    # pathloss in dB based on Friis Transmission Formula
-    f = 868e6
+    # Path loss in dB based on Friis Transmission Formula
+    f          = 868e6
     lambdaSymb = 3e8 / f
-    pathloss = 20*np.log10( (4*np.pi*distance)/lambdaSymb ) # path loss in dB based on Friis Transmission Formula
+    pathloss   = 20 * np.log10( (4*np.pi*distance) / lambdaSymb )  # Path loss in dB based on Friis Transmission Formula
     return pathloss
 
+
 def test_pathloss():
-    # Debug prints for testing pathloss model functions
-    distance1 = 500
-    print('distance1: {}'.format(distance1))
-    pathloss = hata_distanceToPathloss(distance1)
-    print('hata suburban pathloss: {}'.format(pathloss))
-    distance2 = hata_pathlossToDistance(pathloss)
-    print('distance2: {}'.format(distance2))
-    distance1 = 500
-    print('distance1: {}'.format(distance1))
-    pathloss = friis_distanceToPathloss(distance1)
-    print('friis pathloss: {}'.format(pathloss))
-    distance2 = friis_pathlossToDistance(pathloss)
-    print('distance2: {}'.format(distance2))
+    # Debug prints for testing path loss model functions
+    distance_in = 500
+
+    # Hata
+    pathloss     = hata_distanceToPathloss(distance_in)
+    distance_out = hata_pathlossToDistance(pathloss)
+    print('distance in:             {}m'.format(distance_in))
+    print('hata suburban path loss: {}dB'.format(pathloss))
+    print('distance out:            {}m'.format(distance_out))
+
+    # Friis
+    pathloss     = friis_distanceToPathloss(distance_in)
+    distance_out = friis_pathlossToDistance(pathloss)
+    print('distance in:     {}m'.format(distance_in))
+    print('friis path loss: {}dB'.format(pathloss))
+    print('distance out:    {}m'.format(distance_out))
 
 ################################################################################
 # EnergyPerBit points
 ################################################################################
 
+
 def getEnergyPerBit(mod):
+
+    if 'energy' not in locals():
+        print('Energy was not defined, returning 0')
+        energy = 0
 
     return energy
 
+
 def generateBorderPoints(pathlossModel, modulationList, configPwrList, payloadSize):
     loraconfig = LoraConfig()
-    loraconfig.bw = 125000
-    loraconfig.sf = 5
-    loraconfig.phyPl = payloadSize
-    loraconfig.cr = 1
-    loraconfig.ih = False
-    loraconfig.lowDataRate = False
-    loraconfig.crc = True
+    loraconfig.bw            = 125000
+    loraconfig.sf            = 5
+    loraconfig.phyPl         = payloadSize
+    loraconfig.cr            = 1
+    loraconfig.ih            = False
+    loraconfig.lowDataRate   = False
+    loraconfig.crc           = True
     loraconfig.nPreambleSyms = 12
 
     fskconfig = FskConfig()
-    fskconfig.bitrate = 100000
-    fskconfig.nPreambleBits = 16
+    fskconfig.bitrate        = 100000
+    fskconfig.nPreambleBits  = 16
     fskconfig.nSyncwordBytes = 2
-    fskconfig.nLengthBytes = 1
-    fskconfig.nAddressBytes = 1
-    fskconfig.phyPl = payloadSize
-    fskconfig.nCrcBytes = 1
+    fskconfig.nLengthBytes   = 1
+    fskconfig.nAddressBytes  = 1
+    fskconfig.phyPl          = payloadSize
+    fskconfig.nCrcBytes      = 1
 
     retList = []
 
     for mod in modulationList:
         for configPwr in configPwrList:
-            toa = None
-            sensitivity = None
-            datarate = None
+
             if 'lora' in mod:
-                datarate = int(mod.replace('lora_sf', ''))
+                datarate      = int(mod.replace('lora_sf', ''))
                 loraconfig.sf = datarate
-                toa = loraconfig.timeOnAir
-                sensitivity = getSensitivity(mod='lora', datarate=datarate)
+                toa           = loraconfig.timeOnAir
+                sensitivity   = getSensitivity(mod='lora', datarate=datarate)
             elif 'fsk' in mod:
-                datarate = int(1000*float(mod.replace('fsk_', '')))
+                datarate          = int(1000 * float(mod.replace('fsk_', '')))
                 fskconfig.bitrate = datarate
-                toa = fskconfig.timeOnAir
-                sensitivity = getSensitivity(mod='fsk', datarate=datarate)
+                toa               = fskconfig.timeOnAir
+                sensitivity       = getSensitivity(mod='fsk', datarate=datarate)
             else:
                 raise Exception('Unknown modulation: {}'.format(mod))
-            pwr = getTxPower(configPwr=configPwr)
-            energy = toa * pwr
-            energyPerBit = energy/(payloadSize*8)
-            actualBitrate = (payloadSize*8)/toa
+
+            pwr           = getTxPower(configPwr=configPwr)
+            energy        = toa * pwr
+            energyPerBit  = energy / (8 * payloadSize)
+            actualBitrate = (8 * payloadSize) / toa
 
             if pathlossModel == 'friis':
                 distance = friis_pathlossToDistance(configPwr - sensitivity)
             elif pathlossModel == 'hata':
                 distance = hata_pathlossToDistance(configPwr - sensitivity)
             else:
-                raise Exception('You need to choose a valid pathloss model (pathlossModel)!')
+                raise Exception('Invalid path loss model ({})'.format(pathlossModel))
 
             ret = {
-                'modulation': mod,
-                'configPwr': configPwr,
-                'energyPerBit': energyPerBit,
-                'distance': distance,
+                'modulation':    mod,
+                'configPwr':     configPwr,
+                'energyPerBit':  energyPerBit,
+                'distance':      distance,
                 'actualBitrate': actualBitrate,
                 'toa': toa,
             }
             retList.append(ret)
 
-    return pd.DataFrame.from_dict(retList)
+    return pd.DataFrame(retList)
+
 
 def generateReachablePoints(pathlossModel, modulationList, configPwrList, payloadSize, numPoints=1000):
     loraconfig = LoraConfig()
-    loraconfig.bw = 125000
-    loraconfig.sf = 5
-    loraconfig.phyPl = payloadSize
-    loraconfig.cr = 1
-    loraconfig.ih = False
-    loraconfig.lowDataRate = False
-    loraconfig.crc = True
+    loraconfig.bw            = 125000
+    loraconfig.sf            = 5
+    loraconfig.phyPl         = payloadSize
+    loraconfig.cr            = 1
+    loraconfig.ih            = False
+    loraconfig.lowDataRate   = False
+    loraconfig.crc           = True
     loraconfig.nPreambleSyms = 12
 
     fskconfig = FskConfig()
-    fskconfig.bitrate = 100000
-    fskconfig.nPreambleBits = 16
+    fskconfig.bitrate        = 100000
+    fskconfig.nPreambleBits  = 16
     fskconfig.nSyncwordBytes = 2
-    fskconfig.nLengthBytes = 1
-    fskconfig.nAddressBytes = 1
-    fskconfig.phyPl = payloadSize
-    fskconfig.nCrcBytes = 1
+    fskconfig.nLengthBytes   = 1
+    fskconfig.nAddressBytes  = 1
+    fskconfig.phyPl          = payloadSize
+    fskconfig.nCrcBytes      = 1
 
     retList = []
 
     for i in range(numPoints):
-        mod = random.choice(modulationList)
+        mod       = random.choice(modulationList)
         configPwr = random.choice(configPwrList)
-        # distance = random.uniform(0, 1e6) # many config points are invalid due to frequently picking large distance which is not feasible with short-range modulations
-        pathloss = random.uniform(0, 200)
-        distance = hata_pathlossToDistance(pathloss) if pathlossModel == 'hata' else friis_pathlossToDistance(pathloss)
+        pathloss  = random.uniform(0, 200)
+        distance  = hata_pathlossToDistance(pathloss) if pathlossModel == 'hata' else friis_pathlossToDistance(pathloss)
+        # distance = random.uniform(0, 1e6) # Many config points are invalid due to frequently picking large distances which are infeasible with short-range modulations
 
         if 'lora' in mod:
-            datarate = int(mod.replace('lora_sf', ''))
+            datarate      = int(mod.replace('lora_sf', ''))
             loraconfig.sf = datarate
-            toa = loraconfig.timeOnAir
-            sensitivity = getSensitivity(mod='lora', datarate=datarate)
+            toa           = loraconfig.timeOnAir
+            sensitivity   = getSensitivity(mod='lora', datarate=datarate)
         elif 'fsk' in mod:
-            datarate = int(1000*float(mod.replace('fsk_', '')))
+            datarate          = int(1000 * float(mod.replace('fsk_', '')))
             fskconfig.bitrate = datarate
-            toa = fskconfig.timeOnAir
-            sensitivity = getSensitivity(mod='fsk', datarate=datarate)
+            toa               = fskconfig.timeOnAir
+            sensitivity       = getSensitivity(mod='fsk', datarate=datarate)
         else:
             raise Exception('Unknown modulation: {}'.format(mod))
-        pwr = getTxPower(configPwr=configPwr)
-        energy = toa * pwr
-        energyPerBit = energy/(payloadSize*8)
-        actualBitrate = (payloadSize*8)/toa
+
+        pwr           = getTxPower(configPwr=configPwr)
+        energy        = toa * pwr
+        energyPerBit  = energy / (8 * payloadSize)
+        actualBitrate = (8 * payloadSize) / toa
 
         if pathlossModel == 'friis':
             pathloss = friis_distanceToPathloss(distance)
         elif pathlossModel == 'hata':
             pathloss = hata_distanceToPathloss(distance)
         else:
-            raise Exception('You need to choose a valid pathloss model (pathlossModel)!')
+            raise Exception('Invalid path loss model ({})'.format(pathlossModel))
 
-        # ignore infeasible configurations
-        if configPwr - pathloss < sensitivity:
+        # Ignore infeasible configurations
+        if (configPwr - pathloss) < sensitivity:
             continue
 
         ret = {
-            'modulation': mod,
-            'configPwr': configPwr,
-            'energyPerBit': energyPerBit,
-            'distance': distance,
+            'modulation':    mod,
+            'configPwr':     configPwr,
+            'energyPerBit':  energyPerBit,
+            'distance':      distance,
             'actualBitrate': actualBitrate,
-            'toa': toa,
+            'toa':           toa,
         }
         retList.append(ret)
 
-    return pd.DataFrame.from_dict(retList)
+    return pd.DataFrame(retList)
+
 
 def plotPoints(pointSelection, pathlossModel, modulationList, configPwrList, payloadSize, numPoints=10000, write_output_file=False):
     if pointSelection == 'border':
         df = generateBorderPoints(
-            pathlossModel=pathlossModel,
-            modulationList=modulationList,
-            configPwrList=configPwrList,
-            payloadSize=payloadSize,
+            pathlossModel  = pathlossModel,
+            modulationList = modulationList,
+            configPwrList  = configPwrList,
+            payloadSize    = payloadSize,
         )
     elif pointSelection == 'reachable':
-        df = generateReachablePoints(pathlossModel=pathlossModel,
-            modulationList=modulationList,
-            configPwrList=configPwrList,
-            payloadSize=payloadSize,
-            numPoints=numPoints,
+        df = generateReachablePoints(
+            pathlossModel  = pathlossModel,
+            modulationList = modulationList,
+            configPwrList  = configPwrList,
+            payloadSize    = payloadSize,
+            numPoints      = numPoints,
         )
     else:
-        raise Exception('You need to choose a valid point selection (pointSelection)!')
+        raise Exception('Invalid point selection ({})'.format(pointSelection))
 
     source = ColumnDataSource(data=dict(
-        distance=df.distance,
-        energyPerBit=df.energyPerBit,
-        modulation=df.modulation,
-        configPwr=df.configPwr,
-        actualBitrate=df.actualBitrate,
-        toa=df.toa,
+        distance      = df.distance,
+        energyPerBit  = df.energyPerBit,
+        modulation    = df.modulation,
+        configPwr     = df.configPwr,
+        actualBitrate = df.actualBitrate,
+        toa           = df.toa,
     ))
     hover = HoverTool(tooltips=[
-        ("Modulation", "@modulation"),
-        ("configPwr", "@configPwr dBm"),
-        ('energyPerBit', '@energyPerBit J'),
-        ('distance', '@distance{int} m'),
+        ('Modulation',    '@modulation'),
+        ('configPwr',     '@configPwr dBm'),
+        ('energyPerBit',  '@energyPerBit J'),
+        ('distance',      '@distance{int} m'),
         ('actualBitrate', '@actualBitrate{int} bps'),
-        ('Time-on-air', '@toa{0.0000} s'),
+        ('Time-on-air',   '@toa{0.0000} s'),
     ])
     # mapper = LinearColorMapper(palette=plasma(256), low=5, high=12)
     mapper = CategoricalColorMapper(factors=modulationList, palette=plasma(len(modulationList)))
@@ -306,7 +323,7 @@ def plotPoints(pointSelection, pathlossModel, modulationList, configPwrList, pay
     p.xaxis.axis_label = 'Energy Per Bit ([J])'
     p.yaxis.axis_label = 'Distance [m]'
     p.yaxis.formatter.use_scientific = False
-    p.legend.location = 'top_right'
+    p.legend.location  = 'top_right'
 
     output_file('energyPerBit_{}_{}.html'.format(pointSelection, pathlossModel))
     show(p)
@@ -315,14 +332,15 @@ def plotPoints(pointSelection, pathlossModel, modulationList, configPwrList, pay
 # Main
 ################################################################################
 
+
 if __name__ == "__main__":
     # Config
-    modulationList = ['fsk_1', 'fsk_5', 'fsk_10', 'fsk_100', 'fsk_300', 'lora_sf5', 'lora_sf6', 'lora_sf7', 'lora_sf8', 'lora_sf9', 'lora_sf10', 'lora_sf11', 'lora_sf12'] # valid options 'lora_sfX' or 'fsk_Y' (X=spreading factor number, Y=bitrate in kbit)
-    configPwrList = [-9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]
-    payloadSize = 20 # in Bytes
-    pointSelection = 'reachable' # 'border' (max distance) or 'reachable' (reachable configuration)
-    pathlossModel = 'friis' # 'friis' (Friis free-space pathloss model) or 'hata' (Hata suburban path loss model)
-    numPoints = 10000
+    modulationList = ['fsk_1', 'fsk_5', 'fsk_10', 'fsk_100', 'fsk_300', 'lora_sf5', 'lora_sf6', 'lora_sf7', 'lora_sf8', 'lora_sf9', 'lora_sf10', 'lora_sf11', 'lora_sf12']  # valid options 'lora_sfX' or 'fsk_Y' (X=spreading factor number, Y=bitrate in kbit)
+    configPwrList  = [-9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]
+    payloadSize    = 20           # in Bytes
+    pointSelection = 'reachable'  # 'border' (max distance) or 'reachable' (reachable configuration)
+    pathlossModel  = 'friis'      # 'friis' (Friis free-space path loss model) or 'hata' (Hata suburban path loss model)
+    numPoints      = 10000
 
     plotPoints(
         pointSelection=pointSelection,

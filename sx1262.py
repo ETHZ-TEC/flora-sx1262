@@ -37,44 +37,47 @@ The purpose of the LoraConfig class is to store one specific LoRa PHY
 configuration and calculate the time-on-air for that specific LoRa
 configuration.
 
-Calculations are based on the data sheet for SX126x LoRa transceiver chips.
+Calculations are based on the data sheet for Semtech SX126x LoRa transceiver chips.
 
 """
 
+import unittest
 import numpy as np
 from enum import IntEnum, unique
-import unittest
 
-minPlOverhead = 13 # bytes
-adrReqOvh = 4 # bytes
-adrAnsOvh = 1 # bytes
+minPlOverhead = 13  # bytes
+adrReqOvh     = 4   # bytes
+adrAnsOvh     = 1   # bytes
+
 
 class RadioConfig(object):
-    '''Dummy parent class
-    '''
+    """Parent class for configs
+    """
     def __init__(self):
-        raise Exception('ERROR: The \'RadioConfig\' class is a template and should not be used directly!')
+        raise Exception('ERROR: The \'RadioConfig\' class is a template and should not be used directly')
+
 
 class LoraConfig(RadioConfig):
+
     def __init__(self, bw=None, sf=None, phyPl=None, cr=1, ih=True, lowDataRate=False, crc=True, nPreambleSyms=None):
         """
         Args:
-            sf: spreading factor (5 to 12)
-            bw: bandwidth in Hertz (e.g. 125000)
-            phyPl: physical layer payload in bytes (1 to 255)
-            numPreambleSyms: number of preamble symbols (6 to 65535)
-            cr: coding rate value (1 to 4) (cr=1 coding rate of 4/5; cr=4 coding rate of 4/8)
-            ih: implicit header (ih=False header enabled; ih=True header disabled)
-            crc: CRC enabled (crc=True CRC enabled; crc=False CRC disabled)
-            lowDataRate: low data rate optimization (de=True ON; de=False OFF)
+            bw:            bandwidth in Hertz (e.g. 125000)
+            sf:            spreading factor (5 to 12)
+            phyPl:         physical layer payload in bytes (1 to 255)
+            cr:            coding rate value (1 to 4) (cr=1: coding rate of 4/5; cr=4: coding rate of 4/8)
+            ih:            implicit header (ih=False: header enabled; ih=True: header disabled)
+            lowDataRate:   low data rate optimization (lowDataRate=True: On; lowDataRate=False: Off)
+            crc:           CRC enabled (crc=True: CRC enabled; crc=False: CRC disabled)
+            nPreambleSyms: number of preamble symbols (6 to 65535)
         """
-        self.bw = bw                        # bandwidth (BW) [in Hz]
-        self.sf = sf                        # spreading factor (SF)
-        self.phyPl = phyPl                  # physical layer payload in bytes
-        self.cr = cr                        # coding rate (CR) [1, 2, 3, 4]
-        self.ih = ih                        # implicit header
-        self.lowDataRate = lowDataRate      # low data rate enabled
-        self.crc = crc                      # CRC enabled
+        self.bw            = bw             # bandwidth (BW) [in Hz]
+        self.sf            = sf             # spreading factor (SF)
+        self.phyPl         = phyPl          # physical layer payload in bytes
+        self.cr            = cr             # coding rate (CR) [1, 2, 3, 4]
+        self.ih            = ih             # implicit header
+        self.lowDataRate   = lowDataRate    # low data rate enabled
+        self.crc           = crc            # CRC enabled
         self.nPreambleSyms = nPreambleSyms  # number of symbols in the preamble
 
         self.floraModIdx             = None
@@ -91,10 +94,10 @@ class LoraConfig(RadioConfig):
                         125000,
                         250000,
                         500000]
-        self._sfList = (5, 6, 7, 8, 9, 10, 11, 12)
-        self._crList = (1, 2, 3, 4)
-        self._phyPlRange = (0, 255)
-        self._nPreambleSymsRange = (0, 65535) # datasheet says (8, 65535) but less is possible in reality
+        self._sfList             = (5, 6, 7, 8, 9, 10, 11, 12)
+        self._crList             = (1, 2, 3, 4)
+        self._phyPlRange         = (0, 255)
+        self._nPreambleSymsRange = (0, 65535)  # datasheet says (8, 65535) but less is possible in reality
 
     @property
     def timeOnAir(self):
@@ -110,16 +113,16 @@ class LoraConfig(RadioConfig):
         assert self._nPreambleSymsRange[0] <= self.nPreambleSyms <= self._nPreambleSymsRange[1]
         assert self._phyPlRange[0] <= self.phyPl <= self._phyPlRange[1]
 
-        sub = 2 if ( (self.sf not in (5, 6)) and self.lowDataRate) else 0
-        syncSyms = 6.25 if (self.sf in (5, 6)) else 4.25
-        nBitCrc = 16 if self.crc else 0
-        nBitHeader = 0 if self.ih else 20
-        constVal = 0 if (self.sf in (5, 6)) else 8
+        sub        = 2    if ( (self.sf not in (5, 6)) and self.lowDataRate) else 0
+        syncSyms   = 6.25 if (self.sf in (5, 6)) else 4.25
+        nBitCrc    = 16   if self.crc else 0
+        nBitHeader = 0    if self.ih else 20
+        constVal   = 0    if (self.sf in (5, 6)) else 8
 
-        arg1 = 8*self.phyPl + nBitCrc - 4*self.sf + nBitHeader + constVal
-        ceilPart = np.ceil(max(arg1, 0)/(4*(self.sf - sub)))
-        nSymbol = self.nPreambleSyms + syncSyms + 8 + ceilPart*(self.cr + 4)
-        toa = (2**(self.sf) / self.bw) * nSymbol
+        arg1     = 8 * self.phyPl + nBitCrc - 4 * self.sf + nBitHeader + constVal
+        ceilPart = np.ceil( max(arg1, 0) / (4 * (self.sf - sub)))
+        nSymbol  = self.nPreambleSyms + syncSyms + 8 + ceilPart * (self.cr + 4)
+        toa      = (2**(self.sf) / self.bw) * nSymbol
 
         return toa
 
@@ -139,37 +142,39 @@ class LoraConfig(RadioConfig):
 
 
 class FskConfig(RadioConfig):
+
     def __init__(self, bitrate=None, nPreambleBits=None, nSyncwordBytes=None, nLengthBytes=None, nAddressBytes=None, phyPl=None, nCrcBytes=None, bw=None):
         """
         Args:
-            bitrate: bit rate in bits/sec
-            nPreambleBits: number of preamble bits (8 to 65535)
+            bitrate:        bit rate in bits/sec
+            nPreambleBits:  number of preamble bits (8 to 65535)
             nSyncwordBytes: number of sync word bytes (0 to 8)
-            nLengthBytes: number of length bytes (0 or 1)
-            nAddressBytes: number of address bytes (0 or 1)
-            phyPl: physical layer payload length in bytes (1 to 255)
-            nCrcBytes: number of CRC bytes (0, 1, or 2)
+            nLengthBytes:   number of length bytes (0 or 1)
+            nAddressBytes:  number of address bytes (0 or 1)
+            phyPl:          physical layer payload length in bytes (1 to 255)
+            nCrcBytes:      number of CRC bytes (0, 1, or 2)
+            bw:             bandwidth
         """
-        self.bitrate = bitrate
-        self.nPreambleBits = nPreambleBits
+        self.bitrate        = bitrate
+        self.nPreambleBits  = nPreambleBits
         self.nSyncwordBytes = nSyncwordBytes
-        self.nLengthBytes = nLengthBytes
-        self.nAddressBytes = nAddressBytes
-        self.phyPl = phyPl
-        self.nCrcBytes = nCrcBytes
-        self.bw = bw
+        self.nLengthBytes   = nLengthBytes
+        self.nAddressBytes  = nAddressBytes
+        self.phyPl          = phyPl
+        self.nCrcBytes      = nCrcBytes
+        self.bw             = bw
 
         self.floraModIdx             = None
         self.txPower                 = None
         self.sensitivitySrcDatasheet = True
 
-        self._bitrateRange = (600, 300000)
+        self._bitrateRange       = (600, 300000)
         self._nPreambleBitsRange = (8, 65535)
         self._nSyncwordBytesList = (0, 1, 2, 3, 4, 5, 6, 7, 8)
-        self._nLengthBytesList = (0, 1)
-        self._nAddressBytesList = (0, 1)
-        self._phyPlRange = (0, 255)
-        self._nCrcBytesList = (0, 1, 2)
+        self._nLengthBytesList   = (0, 1)
+        self._nAddressBytesList  = (0, 1)
+        self._phyPlRange         = (0, 255)
+        self._nCrcBytesList      = (0, 1, 2)
         self._bwList = [    4800,
                             5800,
                             7300,
@@ -204,12 +209,13 @@ class FskConfig(RadioConfig):
         assert self.nAddressBytes in self._nAddressBytesList
         assert self._phyPlRange[0] <= self.phyPl <= self._phyPlRange[1]
         assert self.nCrcBytes in self._nCrcBytesList
+        assert self.bw in self._bwList
 
         if self.nLengthBytes == 0:
             assert self.phyPl >= 1
 
-        nBits = self.nPreambleBits + self.nSyncwordBytes*8 + self.nLengthBytes*8 + self.nAddressBytes*8 + self.phyPl*8 + self.nCrcBytes*8
-        toa = nBits / self.bitrate
+        nBits = self.nPreambleBits + 8 * (self.nSyncwordBytes + self.nLengthBytes + self.nAddressBytes + self.phyPl + self.nCrcBytes)
+        toa   = nBits / self.bitrate
 
         return toa
 
@@ -388,56 +394,59 @@ def getConfigTxPowerLevels():
 
 
 def getTxPower(configPwr):
-    '''Returns the power consumption (in Watts) when SX1262 is transmitting with 1/2 wave antenna for a given configured power level.
+    """Returns the power consumption (in Watts) when the SX1262 is transmitting with 1/2 wave antenna for a given configured power level.
     Args:
       configPwr: configured power level (in dBm)
-    '''
+    """
 
     assert min(powerMapping.keys()) <= configPwr <= max(powerMapping.keys())
     return powerMapping[configPwr]
 
+
 def getRxPower():
-    '''Returns the power (in Watts) consumption in the receive mode (DC-DC)
-    '''
-    return 0.005*3.3 # in Watt
+    """Returns the power consumption (in Watts) in the receive mode (DC-DC)
+    """
+    return 0.005 * 3.3  # in Watt
 
 
 def getSensitivity(mod, datarate, srcDatasheet=True):
-    '''Returns the receive sensitivity levels.
+    """Returns the receive sensitivity levels.
     Args:
       mod:          modulation, allowed values: ['fsk', 'lora']
       datarate:     speed with which data is transmitted (mod=='fsk': bit rate; mod=='lora': spreading factor)
       srcDatasheet: source of the sensitivity values
                     True: use values based on datasheet
                         LoRa: Linear interpolation/extrapolation based on datasheet values for 125kHz: -124 dBm for SF7, -137 dBm for SF12
-                        FSK: Log interpolation/extrapolation based on datasheets values
-                    False: use values based on measurements (comparison of link budget of simulation to tests on fl2 testbed).
+                        FSK:  Log interpolation/extrapolation based on datasheets values
+                    False: use values based on measurements (comparison of link budget of simulation to tests on FL2 testbed).
                         To account for losses (no separation of Rx/Tx path, RF switch insertion loss, etc.)
                         NOTE: most probably sensitivity is lower (i.e. better) in reality; part of the reduced performance should be attributed to non-ideal transmission (effectively radiated power is less than configured Tx power)
-    '''
-    # get values based on interpolation of datasheet values
+    """
+    # Get values based on interpolation of datasheet values
     ret = None
     if mod == 'fsk':
         bitrate = datarate
-        ret =  3.614*np.log(bitrate) - 148.285
+        ret     = 3.614 * np.log(bitrate) - 148.285
     elif mod == 'lora':
-        sf = datarate
+        sf  = datarate
         ret = sf*(-2.6) - 105.8
     else:
         raise Exception('Unknown modulation \'{}\'!'.format(mod))
 
-    # apply correction based on measurements
+    # Apply correction based on measurements
     if not srcDatasheet:
         if mod == 'fsk':
-             ret+= 5
+            ret += 5
         ret += 10
 
     return ret
+
 
 @unique
 class Modems(IntEnum):
     MODEM_FSK  = 0
     MODEM_LORA = 1
+
 
 @unique
 class LoraCodingRates(IntEnum):
@@ -448,138 +457,139 @@ class LoraCodingRates(IntEnum):
 
 
 flora_radio_constants = [
-        { # 0 (SF12)
-            "modem": Modems.MODEM_LORA,
-            "bandwidth": 0,
-            "datarate": 12,
-            "coderate": LoraCodingRates.LORA_CR_4_5,
+        {  # 0 (SF12)
+            "modem":       Modems.MODEM_LORA,
+            "bandwidth":   0,
+            "datarate":    12,
+            "coderate":    LoraCodingRates.LORA_CR_4_5,
             "preambleLen": 10
         },
-        { # 1 (SF11)
-            "modem": Modems.MODEM_LORA,
-            "bandwidth": 0,
-            "datarate": 11,
-            "coderate": LoraCodingRates.LORA_CR_4_5,
+        {  # 1 (SF11)
+            "modem":       Modems.MODEM_LORA,
+            "bandwidth":   0,
+            "datarate":    11,
+            "coderate":    LoraCodingRates.LORA_CR_4_5,
             "preambleLen": 10
         },
-        { # 2 (SF10)
-            "modem": Modems.MODEM_LORA,
-            "bandwidth": 0,
-            "datarate": 10,
-            "coderate": LoraCodingRates.LORA_CR_4_5,
+        {  # 2 (SF10)
+            "modem":       Modems.MODEM_LORA,
+            "bandwidth":   0,
+            "datarate":    10,
+            "coderate":    LoraCodingRates.LORA_CR_4_5,
             "preambleLen": 10
         },
-        { # 3 (SF9)
-            "modem": Modems.MODEM_LORA,
-            "bandwidth": 0,
-            "datarate": 9,
-            "coderate": LoraCodingRates.LORA_CR_4_5,
+        {  # 3 (SF9)
+            "modem":       Modems.MODEM_LORA,
+            "bandwidth":   0,
+            "datarate":    9,
+            "coderate":    LoraCodingRates.LORA_CR_4_5,
             "preambleLen": 10
         },
-        { # 4 (SF8)
-            "modem": Modems.MODEM_LORA,
-            "bandwidth": 0,
-            "datarate": 8,
-            "coderate": LoraCodingRates.LORA_CR_4_5,
+        {  # 4 (SF8)
+            "modem":       Modems.MODEM_LORA,
+            "bandwidth":   0,
+            "datarate":    8,
+            "coderate":    LoraCodingRates.LORA_CR_4_5,
             "preambleLen": 10
         },
-        { # 5 (SF7)
-            "modem": Modems.MODEM_LORA,
-            "bandwidth": 0,
-            "datarate": 7,
-            "coderate": LoraCodingRates.LORA_CR_4_5,
+        {  # 5 (SF7)
+            "modem":       Modems.MODEM_LORA,
+            "bandwidth":   0,
+            "datarate":    7,
+            "coderate":    LoraCodingRates.LORA_CR_4_5,
             "preambleLen": 10
         },
-        { # 6 (SF6)
-            "modem": Modems.MODEM_LORA,
-            "bandwidth": 0,
-            "datarate": 6,
-            "coderate": LoraCodingRates.LORA_CR_4_5,
+        {  # 6 (SF6)
+            "modem":       Modems.MODEM_LORA,
+            "bandwidth":   0,
+            "datarate":    6,
+            "coderate":    LoraCodingRates.LORA_CR_4_5,
             "preambleLen": 12
         },
-        { # 7 (SF5)
-            "modem": Modems.MODEM_LORA,
-            "bandwidth": 0,
-            "datarate": 5,
-            "coderate": LoraCodingRates.LORA_CR_4_5,
+        {  # 7 (SF5)
+            "modem":       Modems.MODEM_LORA,
+            "bandwidth":   0,
+            "datarate":    5,
+            "coderate":    LoraCodingRates.LORA_CR_4_5,
             "preambleLen": 12
         },
-        { # 8 (FSK 125k)
-            "modem": Modems.MODEM_FSK,
-            "bandwidth": 234300,
-            "datarate": 125000,
-            "fdev": 50000,
+        {  # 8 (FSK 125k)
+            "modem":       Modems.MODEM_FSK,
+            "bandwidth":   234300,
+            "datarate":    125000,
+            "fdev":        50000,
             "preambleLen": 2
         },
-        { # 9 (FSK 200k)
-            "modem": Modems.MODEM_FSK,
-            "bandwidth": 234300,
-            "datarate": 200000,
-            "fdev": 10000,
+        {  # 9 (FSK 200k)
+            "modem":       Modems.MODEM_FSK,
+            "bandwidth":   234300,
+            "datarate":    200000,
+            "fdev":        10000,
             "preambleLen": 2
         },
-        { # 10 (FSK 250k)
-            "modem": Modems.MODEM_FSK,
-            "bandwidth": 312000,
-            "datarate": 250000,
-            "fdev": 23500,
+        {  # 10 (FSK 250k)
+            "modem":       Modems.MODEM_FSK,
+            "bandwidth":   312000,
+            "datarate":    250000,
+            "fdev":        23500,
             "preambleLen": 4
         },
 ]
 
 gloria_timings = [
-    { # 0 (SF12)
-        'slotOverhead': 4179556/8e6,
-        'floodInitOverhead': 795938/8e6
+    {  # 0 (SF12)
+        'slotOverhead':      4179556/8e6,
+        'floodInitOverhead':  795938/8e6
     },
-    { # 1 (SF11)
-        'slotOverhead': 2132075/8e6,
-        'floodInitOverhead': 402722/8e6
+    {  # 1 (SF11)
+        'slotOverhead':      2132075/8e6,
+        'floodInitOverhead':  402722/8e6
     },
-    { # 2 (SF10)
-        'slotOverhead': 1050062/8e6,
-        'floodInitOverhead': 206114/8e6
+    {  # 2 (SF10)
+        'slotOverhead':      1050062/8e6,
+        'floodInitOverhead':  206114/8e6
     },
-    { # 3 (SF9)
-        'slotOverhead': 537151/8e6,
+    {  # 3 (SF9)
+        'slotOverhead':      537151/8e6,
         'floodInitOverhead': 107810/8e6
     },
-    { # 4 (SF8)
-        'slotOverhead': 283375/8e6,
-        'floodInitOverhead': 58658/8e6
+    {  # 4 (SF8)
+        'slotOverhead':      283375/8e6,
+        'floodInitOverhead':  58658/8e6
     },
-    { # 5 (SF7)
-        'slotOverhead': 153639/8e6,
-        'floodInitOverhead': 34082/8e6
+    {  # 5 (SF7)
+        'slotOverhead':      153639/8e6,
+        'floodInitOverhead':  34082/8e6
     },
-    { # 6 (SF6)
-        'slotOverhead': 79827/8e6,
+    {  # 6 (SF6)
+        'slotOverhead':      79827/8e6,
         'floodInitOverhead': 32507/8e6
     },
-    { # 7 (SF5)
-        'slotOverhead': 50171/8e6,
+    {  # 7 (SF5)
+        'slotOverhead':      50171/8e6,
         'floodInitOverhead': 21007/8e6
     },
-    { # 8 (FSK 125k)
-        'slotOverhead': 28000/8e6,
+    {  # 8 (FSK 125k)
+        'slotOverhead':      28000/8e6,
         'floodInitOverhead': 18000/8e6
     },
-    { # 9 (FSK 200k)
-        'slotOverhead': 26400/8e6,
+    {  # 9 (FSK 200k)
+        'slotOverhead':      26400/8e6,
         'floodInitOverhead': 18000/8e6
     },
-    { # 10 (FSK 250k)
-        'slotOverhead': 14000/8e6,
+    {  # 10 (FSK 250k)
+        'slotOverhead':      14000/8e6,
         'floodInitOverhead': 18000/8e6
     },
 ]
 
 GLORIA_FLOOD_FINISH_OVERHEAD = 152/8e6
 
+
 def getFloraConfig(modIdx, phyPlLen=None):
     """Returns a radio config object based on the flora modIdx.
     Args:
-        modIdx: index of modulation radio_modulations struct array as defined in radio_constants.c
+        modIdx:   index of modulation radio_modulations struct array as defined in radio_constants.c
         phyPlLen: physical layer payload (in bytes)
     Returns:
         radio config object
@@ -587,42 +597,47 @@ def getFloraConfig(modIdx, phyPlLen=None):
     mod = flora_radio_constants[modIdx]
 
     def mapBw(bw):
-        if bw == 0: return 125000
-        elif bw == 1: return 250000
-        elif bw == 2: return 500000
-        else: raise Exception('ERROR: undefined bandwidth!')
+        if   bw == 0:
+            return 125000
+        elif bw == 1:
+            return 250000
+        elif bw == 2:
+            return 500000
+        else:
+            raise Exception('ERROR: undefined bandwidth ({})'.format(bw))
 
     if mod['modem'] == Modems.MODEM_LORA:
         loraconfig = LoraConfig()
-        loraconfig.bw = mapBw(mod['bandwidth'])
-        loraconfig.sf = mod['datarate']
+        loraconfig.bw    = mapBw(mod['bandwidth'])
+        loraconfig.sf    = mod['datarate']
         loraconfig.phyPl = phyPlLen
-        loraconfig.cr = mod['coderate']
-        loraconfig.ih = False
-        loraconfig.lowDataRate = True if mod['datarate'] in [11, 12] else False
-        loraconfig.crc = True
+        loraconfig.cr    = mod['coderate']
+        loraconfig.ih    = False
+        loraconfig.lowDataRate   = True if mod['datarate'] in [11, 12] else False
+        loraconfig.crc           = True
         loraconfig.nPreambleSyms = mod['preambleLen']
-        loraconfig.floraModIdx = modIdx
+        loraconfig.floraModIdx   = modIdx
         return loraconfig
     elif mod['modem'] == Modems.MODEM_FSK:
         fskconfig = FskConfig()
-        fskconfig.bitrate = mod['datarate']
-        fskconfig.nPreambleBits = 8*mod['preambleLen']
+        fskconfig.bitrate        = mod['datarate']
+        fskconfig.nPreambleBits  = 8 * mod['preambleLen']
         fskconfig.nSyncwordBytes = 3
-        fskconfig.nLengthBytes = 1
-        fskconfig.nAddressBytes = 0
-        fskconfig.phyPl = phyPlLen
-        fskconfig.nCrcBytes = 2
-        fskconfig.bw = mod['bandwidth']
-        fskconfig.floraModIdx = modIdx
+        fskconfig.nLengthBytes   = 1
+        fskconfig.nAddressBytes  = 0
+        fskconfig.phyPl          = phyPlLen
+        fskconfig.nCrcBytes      = 2
+        fskconfig.bw             = mod['bandwidth']
+        fskconfig.floraModIdx    = modIdx
         return fskconfig
     else:
         raise Exception('ERROR: invalid modulation!')
 
+
 def getFloraToa(modIdx, phyPlLen):
     """Calculates the time-on-air of a transmission.
     Args:
-        modIdx: index of modulation radio_modulations struct array as defined in radio_constants.c
+        modIdx:   index of modulation radio_modulations struct array as defined in radio_constants.c
         phyPlLen: physical layer payload (in bytes)
     Returns:
         Time-on-air of a single packet in seconds.
@@ -630,22 +645,24 @@ def getFloraToa(modIdx, phyPlLen):
     config = getFloraConfig(modIdx, phyPlLen)
     return config.timeOnAir
 
+
 def getGloriaFloodDuration(modIdx, phyPlLen, nTx, numHops):
     """Calculates the duration of a gloria flood.
     Args:
-        modIdx: index of modulation radio_modulations struct array as defined in radio_constants.c
+        modIdx:   index of modulation radio_modulations struct array as defined in radio_constants.c
         phyPlLen: physical layer payload (in bytes)
-        nTx: number of retransmissions
-        numHops: number of hops (proportional to network diameter)
+        nTx:      number of retransmissions
+        numHops:  number of hops (proportional to network diameter)
     Returns:
         Duration of the Gloria flood in seconds.
     """
-    config = getFloraConfig(modIdx, phyPlLen)
-    timing = gloria_timings[modIdx]
-    toa =  config.timeOnAir
+    config   = getFloraConfig(modIdx, phyPlLen)
+    timing   = gloria_timings[modIdx]
+    toa      = config.timeOnAir
     slotTime = toa + timing['slotOverhead']
     numSlots = nTx + numHops - 1
     return timing['floodInitOverhead'] + GLORIA_FLOOD_FINISH_OVERHEAD + numSlots * slotTime
+
 
 class TestTimeOnAirMethods(unittest.TestCase):
 
@@ -685,13 +702,13 @@ class TestTimeOnAirMethods(unittest.TestCase):
 
     def test_setParams(self):
         loraconfig = LoraConfig()
-        loraconfig.bw = 125000
-        loraconfig.sf = 7
-        loraconfig.phyPl = 12
-        loraconfig.cr = LoraCodingRates.LORA_CR_4_5
-        loraconfig.ih = False
-        loraconfig.lowDataRate = False
-        loraconfig.crc = True
+        loraconfig.bw            = 125000
+        loraconfig.sf            = 7
+        loraconfig.phyPl         = 12
+        loraconfig.cr            = LoraCodingRates.LORA_CR_4_5
+        loraconfig.ih            = False
+        loraconfig.lowDataRate   = False
+        loraconfig.crc           = True
         loraconfig.nPreambleSyms = 8
         self.assertAlmostEqual(
             loraconfig.timeOnAir,
@@ -702,35 +719,35 @@ class TestTimeOnAirMethods(unittest.TestCase):
 
 if __name__ == '__main__':
     # fskconfig = FskConfig()
-    # fskconfig.bitrate = 250000
-    # fskconfig.nPreambleBits = 16
+    # fskconfig.bitrate        = 250000
+    # fskconfig.nPreambleBits  = 16
     # fskconfig.nSyncwordBytes = 2
-    # fskconfig.nLengthBytes = 1
-    # fskconfig.nAddressBytes = 1
-    # fskconfig.phyPl = 6
-    # fskconfig.nCrcBytes = 1
-    # fskconfig.bw = 312000 # has no influence on timeOnAir
-    # print(fskconfig.timeOnAir)
+    # fskconfig.nLengthBytes   = 1
+    # fskconfig.nAddressBytes  = 1
+    # fskconfig.phyPl          = 6
+    # fskconfig.nCrcBytes      = 1
+    # fskconfig.bw             = 312000 # has no influence on timeOnAir
+    # print(Time-on-air (custom): {:.6f}s'.format(fskconfig.timeOnAir))
 
     # loraconfig = LoraConfig()
-    # loraconfig.bw = 125000
-    # loraconfig.sf = 12
-    # loraconfig.phyPl = 2
-    # loraconfig.cr = LoraCodingRates.LORA_CR_4_5
-    # loraconfig.ih = False
-    # loraconfig.lowDataRate = False
-    # loraconfig.crc = 0
+    # loraconfig.bw            = 125000
+    # loraconfig.sf            = 12
+    # loraconfig.phyPl         = 2
+    # loraconfig.cr            = LoraCodingRates.LORA_CR_4_5
+    # loraconfig.ih            = False
+    # loraconfig.lowDataRate   = False
+    # loraconfig.crc           = 0
     # loraconfig.nPreambleSyms = 12
     # print('Time-on-air (custom): {:.6f}s'.format(loraconfig.timeOnAir))
 
-    modIdx = 7   # modulation (as defined in radio_constants.c)
+    modIdx   = 7  # modulation (as defined in radio_constants.c)
     phyPlLen = 5  # in bytes
     print('Time-on-air (mod={}, phyPlLen={}): {:.6f}s'.format(modIdx, phyPlLen, getFloraToa(modIdx, phyPlLen)))
 
-    nTx = 3
-    numHops = 6
-    modIdx = 10   # modulation (as defined in radio_constants.c)
-    phyPlLen = 6  # in bytes
+    nTx      = 3
+    numHops  = 6
+    modIdx   = 10  # modulation (as defined in radio_constants.c)
+    phyPlLen = 6   # in bytes
     print('Gloria Flood Duration (mod={}, phyPlLen={}, nTx={}, phyPlLen={}): {:.6f}s'.format(modIdx, phyPlLen, nTx, numHops, getGloriaFloodDuration(modIdx, phyPlLen, nTx, numHops)))
 
     # unittest.main()
