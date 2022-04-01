@@ -731,23 +731,24 @@ if __name__ == '__main__':
 
     # loraconfig = LoraConfig()
     # loraconfig.bw            = 125000
-    # loraconfig.sf            = 12
-    # loraconfig.phyPl         = 2
+    # loraconfig.sf            = 7
+    # loraconfig.phyPl         = 80
     # loraconfig.cr            = LoraCodingRates.LORA_CR_4_5
     # loraconfig.ih            = False
     # loraconfig.lowDataRate   = False
-    # loraconfig.crc           = 0
+    # loraconfig.crc           = 1
     # loraconfig.nPreambleSyms = 12
     # print('Time-on-air (custom): {:.6f}s'.format(loraconfig.timeOnAir))
 
-    modIdx   = 7  # modulation (as defined in radio_constants.c)
-    phyPlLen = 5  # in bytes
+
+    modIdx   = 8   # modulation (as defined in radio_constants.c)
+    phyPlLen = 20  # in bytes
     print('Time-on-air (mod={}, phyPlLen={}): {:.6f}s'.format(modIdx, phyPlLen, getFloraToa(modIdx, phyPlLen)))
 
-    nTx      = 3
-    numHops  = 6
-    modIdx   = 10  # modulation (as defined in radio_constants.c)
-    phyPlLen = 6   # in bytes
-    print('Gloria Flood Duration (mod={}, phyPlLen={}, nTx={}, phyPlLen={}): {:.6f}s'.format(modIdx, phyPlLen, nTx, numHops, getGloriaFloodDuration(modIdx, phyPlLen, nTx, numHops)))
+    # nTx      = 2
+    # numHops  = 3
+    # modIdx   = 7   # modulation (as defined in radio_constants.c)
+    # phyPlLen = 63  # in bytes
+    # print('Gloria Flood Duration (mod={}, phyPlLen={}, nTx={}, numHops={}): {:.6f}s'.format(modIdx, phyPlLen, nTx, numHops, getGloriaFloodDuration(modIdx, phyPlLen, nTx, numHops)))
 
     # unittest.main()
